@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
 from collections.abc import Coroutine
 from dataclasses import asdict, dataclass, field
@@ -41,6 +42,27 @@ OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
 # File types skipped during the HTML (browser) crawl phase. PDFs are still
 # discovered via page links and handled separately by ``crawl_pdfs``.
 EXCLUDED_PATTERNS = ["*.mp3", "*.docx", "*.zip", "*.doc", "*.xls", "*.xlsx"]
+
+# Whole HTML tags stripped before markdown generation so chrome like the
+# site header, footer and navigation never reaches the extracted content.
+EXCLUDED_TAGS = ["header", "footer", "nav", "aside"]
+
+# CSS selectors for non-content widgets (carousels/sliders, icon-only
+# elements, decorative SVGs, leftover nav/menu blocks and cookie/consent
+# banners). Combined into the single comma-separated string crawl4ai's
+# ``excluded_selector`` expects.
+EXCLUDED_SELECTOR = ", ".join([
+    ".carousel", ".slider", ".swiper", ".slick", "[class*='carousel']",
+    "[class*='slider']", "[class*='swiper']",
+    ".nav", ".navbar", ".navigation", ".menu", ".breadcrumb", ".breadcrumbs",
+    ".icon", "[class*='icon-']", "[class*='-icon']", "i.fa", "i.fas",
+    "i.fab", "i.far", "svg",
+    # OneTrust cookie consent (used by teg.ie) plus generic cookie/consent banners.
+    "#onetrust-consent-sdk", "#onetrust-banner-sdk", "#onetrust-pc-sdk",
+    ".onetrust-pc-dark-filter", ".ot-sdk-container",
+    "[class*='cookie']", "[id*='cookie']",
+    "[class*='consent']", "[id*='consent']",
+])
 
 _T = TypeVar("_T")
 
@@ -72,9 +94,30 @@ class CrawledPage:
     url: str
     content_type: str  # "html" or "pdf"
     markdown: str = ""
+    language: str | None = None  # "Irish", "English" or None (from <html lang>)
     metadata: dict = field(default_factory=dict)
     success: bool = False
     error: str | None = None
+
+
+# Markdown links with no visible text, e.g. ``[](https://...)``. These are
+# left behind when an icon/image-only anchor has its image stripped, so they
+# carry no readable content and should be dropped.
+_EMPTY_LINK_RE = re.compile(r"\[\]\([^)]*\)")
+# A list bullet left empty after its only content (an empty link) was removed.
+_EMPTY_BULLET_RE = re.compile(r"^[ \t]*[*+-][ \t]*$", re.MULTILINE)
+# Three or more consecutive newlines collapse down to a single blank line.
+_EXTRA_BLANK_LINES_RE = re.compile(r"\n{3,}")
+
+
+def _clean_markdown(text: str) -> str:
+    """Strip empty/icon-only links and the blank bullets they leave behind."""
+    if not text:
+        return text
+    text = _EMPTY_LINK_RE.sub("", text)
+    text = _EMPTY_BULLET_RE.sub("", text)
+    text = _EXTRA_BLANK_LINES_RE.sub("\n\n", text)
+    return text
 
 
 def _to_markdown(result) -> str:
@@ -83,9 +126,33 @@ def _to_markdown(result) -> str:
     if md is None:
         return ""
     raw = getattr(md, "raw_markdown", None)
-    if raw is not None:
-        return raw
-    return str(md)
+    text = raw if raw is not None else str(md)
+    return _clean_markdown(text)
+
+
+# Captures the value of the ``lang`` attribute on the opening ``<html>`` tag,
+# e.g. ``<html lang="ga">`` or ``<html dir="ltr" lang="en-IE">``.
+_HTML_LANG_RE = re.compile(
+    r"<html\b[^>]*?\blang\s*=\s*[\"']?([a-zA-Z][a-zA-Z-]*)", re.IGNORECASE
+)
+
+# Maps an ISO 639-1 primary language subtag to a human-readable name.
+_LANG_NAMES = {"ga": "Irish", "en": "English"}
+
+
+def _detect_language(result) -> str | None:
+    """Read the ``<html lang>`` attribute and map it to a language name.
+
+    Returns ``"Irish"`` for ``lang="ga"``, ``"English"`` for ``lang="en"``
+    (region subtags like ``en-IE`` are accepted), and ``None`` when the
+    attribute is missing or holds an unrecognised code.
+    """
+    html = getattr(result, "html", None) or ""
+    match = _HTML_LANG_RE.search(html)
+    if not match:
+        return None
+    primary = match.group(1).split("-", 1)[0].lower()
+    return _LANG_NAMES.get(primary)
 
 
 def _collect_pdf_links(result, base_url: str, same_domain: bool) -> set[str]:
@@ -136,6 +203,12 @@ async def crawl_html_pages(
             ]),
         ),
         cache_mode=CacheMode.BYPASS,
+        # Strip non-content chrome so the extracted markdown stays focused on
+        # the page's main text instead of images, header/footer/nav and widgets.
+        excluded_tags=EXCLUDED_TAGS,
+        excluded_selector=EXCLUDED_SELECTOR,
+        exclude_all_images=True,
+        remove_overlay_elements=True,
     )
 
     pages: list[CrawledPage] = []
@@ -153,6 +226,7 @@ async def crawl_html_pages(
                     url=result.url,
                     content_type="html",
                     markdown=_to_markdown(result) if success else "",
+                    language=_detect_language(result) if success else None,
                     metadata=getattr(result, "metadata", {}) or {},
                     success=success,
                     error=getattr(result, "error_message", None),
