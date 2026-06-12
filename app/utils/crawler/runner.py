@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from app.core.config import settings
+from app.utils.crawler.chunk_stage import chunk_pages
 from app.utils.crawler.html_stage import crawl_html_pages
 from app.utils.crawler.models import CrawledPage
 from app.utils.crawler.pdf_stage import crawl_pdfs
 from app.utils.crawler.runtime import run_async
-from app.utils.crawler.storage import save_pages_json
+from app.utils.crawler.storage import save_chunks_json, save_pages_json
 
 
 async def crawl_website(
@@ -51,11 +52,14 @@ def run_crawl(
     include_pdf: bool = True,
     include_external: bool = False,
     save_json: bool = True,
+    chunk: bool = True,
 ) -> list[CrawledPage]:
     """Synchronous wrapper around :func:`crawl_website`.
 
-    When ``save_json`` is True, the crawled results are also written to a JSON
-    file under :data:`app.utils.crawler.config.OUTPUT_DIR`.
+    When ``save_json`` is True, the crawled results are written to a JSON file
+    under :data:`app.utils.crawler.config.OUTPUT_DIR`. When ``chunk`` is also
+    True, the pages are then split into hybrid semantic + recursive chunks and
+    saved to ``crawled-chunked-data.json`` in the same directory.
     """
     start_url = url or settings.website_url
     pages = run_async(
@@ -71,5 +75,10 @@ def run_crawl(
     if save_json:
         output_path = save_pages_json(pages, source_url=start_url)
         print(f"Saved {len(pages)} pages to {output_path}")
+
+        if chunk:
+            chunks = chunk_pages(pages)
+            chunk_path = save_chunks_json(chunks, source_url=start_url)
+            print(f"Saved {len(chunks)} chunks to {chunk_path}")
 
     return pages

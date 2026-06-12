@@ -8,24 +8,34 @@ imports such as ``from app.utils.crawl_website import run_crawl`` keep working.
 from __future__ import annotations
 
 from app.utils.crawler import (
+    CHUNK_OUTPUT_FILENAME,
     OUTPUT_DIR,
     OUTPUT_FILENAME,
+    Chunk,
     CrawledPage,
+    chunk_crawled_data,
+    chunk_pages,
     crawl_html_pages,
     crawl_pdfs,
     crawl_website,
     run_crawl,
+    save_chunks_json,
     save_pages_json,
 )
 
 __all__ = [
+    "Chunk",
     "CrawledPage",
+    "CHUNK_OUTPUT_FILENAME",
     "OUTPUT_DIR",
     "OUTPUT_FILENAME",
+    "chunk_crawled_data",
+    "chunk_pages",
     "crawl_html_pages",
     "crawl_pdfs",
     "crawl_website",
     "run_crawl",
+    "save_chunks_json",
     "save_pages_json",
 ]
 
