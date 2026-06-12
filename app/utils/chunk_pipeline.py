@@ -45,7 +45,7 @@ _MARKDOWN_HEADERS = [("#", "h1"), ("##", "h2"), ("###", "h3")]
 _PARENT_CHUNK_SIZE = 2000
 
 _PDF_CHUNK_SIZE = 800
-_PDF_CHUNK_OVERLAP = 100
+_PDF_CHUNK_OVERLAP = 0
 
 _TOKEN_ENCODING = "cl100k_base"
 
