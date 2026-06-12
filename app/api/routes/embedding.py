@@ -4,22 +4,12 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.pipeline.embedding.cache import get_retriever, invalidate_retriever
 from app.pipeline.embedding.config import get_embedding_settings
 from app.pipeline.embedding.models import IndexSummary, SearchResult
-from app.pipeline.embedding.retriever import HybridRetriever
 from app.pipeline.embedding_pipeline import run_indexing
 
 router = APIRouter()
-
-_retriever: HybridRetriever | None = None
-
-
-def _get_retriever() -> HybridRetriever:
-    """Lazily build and cache the hybrid retriever across requests."""
-    global _retriever
-    if _retriever is None:
-        _retriever = HybridRetriever.from_settings()
-    return _retriever
 
 
 class IndexRequest(BaseModel):
@@ -58,8 +48,7 @@ async def index(request: IndexRequest) -> IndexSummary:
             detail=f"Chunked data file not found: {input_path}",
         )
 
-    global _retriever
-    _retriever = None  # invalidate cached retriever after (re)indexing
+    invalidate_retriever()
 
     try:
         return await asyncio.to_thread(
@@ -75,7 +64,7 @@ async def index(request: IndexRequest) -> IndexSummary:
 @router.post("/search", response_model=SearchResponse)
 async def search(request: SearchRequest) -> SearchResponse:
     try:
-        retriever = await asyncio.to_thread(_get_retriever)
+        retriever = await asyncio.to_thread(get_retriever)
         results = await asyncio.to_thread(
             retriever.search,
             request.query,

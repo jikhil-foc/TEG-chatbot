@@ -3,21 +3,11 @@ import asyncio
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.pipeline.embedding.retriever import HybridRetriever
+from app.pipeline.embedding.cache import get_retriever
 from app.pipeline.llm.models import Source
 from app.pipeline.llm.pipeline import answer_question
 
 router = APIRouter()
-
-_retriever: HybridRetriever | None = None
-
-
-def _get_retriever() -> HybridRetriever:
-    """Lazily build and cache the hybrid retriever across requests."""
-    global _retriever
-    if _retriever is None:
-        _retriever = HybridRetriever.from_settings()
-    return _retriever
 
 
 class AskRequest(BaseModel):
@@ -39,7 +29,7 @@ class AskResponse(BaseModel):
 @router.post("", response_model=AskResponse)
 async def ask(request: AskRequest) -> AskResponse:
     try:
-        retriever = await asyncio.to_thread(_get_retriever)
+        retriever = await asyncio.to_thread(get_retriever)
         result = await asyncio.to_thread(
             answer_question,
             request.query,

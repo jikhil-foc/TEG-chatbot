@@ -10,6 +10,7 @@ langchain-text-splitters>=0.3.0
 tiktoken>=0.7.0
 langchain>=0.3.0
 langchain-core>=0.3.0
+langgraph>=0.2.0
 langchain-openai>=0.2.0
 langchain-qdrant>=0.2.0
 qdrant-client>=1.12.0
