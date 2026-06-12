@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.utils.chunk_pipeline import (
+from app.pipeline.chunk_pipeline import (
     INPUT_PATH,
     OUTPUT_PATH,
     run_pipeline,

@@ -15,8 +15,8 @@ greedily up to the parent token target for retrieval context. ``tiktoken``
 (``cl100k_base``) is used only as a local token counter for parent merging; it
 does not load or call any model.
 
-This module is independent of :mod:`app.utils.crawler.chunk_stage`, which uses
-a separate semantic chunking path for crawler-integrated runs.
+This module is independent of the website crawler; it reads the JSON output
+produced by :mod:`app.pipeline.crawl_website`.
 """
 
 from __future__ import annotations
