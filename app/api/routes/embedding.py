@@ -36,6 +36,10 @@ class IndexRequest(BaseModel):
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=4000)
     top_k: int = Field(default=10, ge=1, le=100)
+    expand_to_parent: bool = Field(
+        default=True,
+        description="Expand each match to its full parent section before returning",
+    )
 
 
 class SearchResponse(BaseModel):
@@ -76,6 +80,7 @@ async def search(request: SearchRequest) -> SearchResponse:
             retriever.search,
             request.query,
             request.top_k,
+            request.expand_to_parent,
         )
     except FileNotFoundError as exc:
         raise HTTPException(

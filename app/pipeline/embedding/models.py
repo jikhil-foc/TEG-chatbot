@@ -16,6 +16,8 @@ class ChunkMetadata(BaseModel):
     title: str
     content_type: str
     header_path: list[str] = Field(default_factory=list)
+    chunk_index: int = 0
+    raw_content: str = ""
     token_count: int
 
 

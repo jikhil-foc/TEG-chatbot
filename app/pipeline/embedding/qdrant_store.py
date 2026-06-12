@@ -86,6 +86,13 @@ class QdrantService:
                 )
             },
         )
+        # Index parent_chunk_id so retrieval-time parent expansion (fetching all
+        # child chunks of a matched section) can filter efficiently.
+        self._client.create_payload_index(
+            collection_name=name,
+            field_name="metadata.parent_chunk_id",
+            field_schema=models.PayloadSchemaType.KEYWORD,
+        )
         logger.info("Created Qdrant collection '%s'", name)
         return True
 

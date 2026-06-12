@@ -34,18 +34,65 @@ def count_tokens(text: str, encoding_name: str = "cl100k_base") -> int:
     return len(_get_encoder(encoding_name).encode(text, disallowed_special=()))
 
 
+def _dedupe_preserve_order(items: list[str]) -> list[str]:
+    """Drop blanks and consecutive/repeated duplicates, preserving order."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        key = (item or "").strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        result.append(key)
+    return result
+
+
+def build_breadcrumb(title: str, header_path: list[str]) -> str:
+    """Build a ``title > h1 > h2`` breadcrumb from the page title and headers.
+
+    The page title and header path frequently overlap, so duplicates are
+    removed to avoid noisy repetition in the embedded text.
+    """
+    parts = _dedupe_preserve_order([title, *(header_path or [])])
+    return " > ".join(parts)
+
+
+def build_contextualized_content(
+    title: str,
+    header_path: list[str],
+    content: str,
+) -> str:
+    """Prepend the section breadcrumb to a chunk so it is self-describing.
+
+    A standalone table or short paragraph often omits the words that the user
+    searches for (e.g. "fee"); prefixing the heading hierarchy makes the chunk
+    retrievable on its own for both dense and sparse (BM25) search.
+    """
+    breadcrumb = build_breadcrumb(title, header_path)
+    if breadcrumb:
+        return f"{breadcrumb}\n\n{content}"
+    return content
+
+
 def _record_to_document(record: dict[str, Any], encoding_name: str) -> Document:
-    content = record.get("content", "") or ""
+    raw_content = record.get("content", "") or ""
+    title = record.get("title", "") or ""
+    header_path = record.get("header_path", []) or []
+    page_content = build_contextualized_content(title, header_path, raw_content)
     metadata = {
         "chunk_id": record["chunk_id"],
         "parent_chunk_id": record.get("parent_chunk_id", record["chunk_id"]),
         "url": record.get("url", ""),
-        "title": record.get("title", ""),
+        "title": title,
         "content_type": record.get("content_type", ""),
-        "header_path": record.get("header_path", []) or [],
-        "token_count": count_tokens(content, encoding_name),
+        "header_path": header_path,
+        "chunk_index": record.get("chunk_index", 0),
+        # Original block text (without breadcrumb) so a parent section can be
+        # reassembled cleanly at retrieval time from its child chunks.
+        "raw_content": raw_content,
+        "token_count": count_tokens(page_content, encoding_name),
     }
-    return Document(page_content=content, metadata=metadata)
+    return Document(page_content=page_content, metadata=metadata)
 
 
 def load_documents(

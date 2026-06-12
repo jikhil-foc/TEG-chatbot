@@ -91,10 +91,11 @@ def run_search(
     query: str,
     top_k: int = 10,
     settings: EmbeddingSettings | None = None,
+    expand_to_parent: bool = True,
 ) -> list[dict]:
     """Convenience wrapper that builds a retriever and runs one search."""
     retriever = HybridRetriever.from_settings(settings)
-    return retriever.search(query, top_k=top_k)
+    return retriever.search(query, top_k=top_k, expand_to_parent=expand_to_parent)
 
 
 def _configure_logging(verbose: bool) -> None:
@@ -128,6 +129,11 @@ def _build_parser() -> argparse.ArgumentParser:
     search_parser = subparsers.add_parser("search", help="Run a hybrid search")
     search_parser.add_argument("--query", required=True, help="Search query text")
     search_parser.add_argument("--top-k", type=int, default=10, help="Number of hits")
+    search_parser.add_argument(
+        "--no-expand",
+        action="store_true",
+        help="Return matched child chunks only, without parent-section expansion",
+    )
 
     return parser
 
@@ -150,7 +156,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "search":
-        results = run_search(args.query, top_k=args.top_k, settings=settings)
+        results = run_search(
+            args.query,
+            top_k=args.top_k,
+            settings=settings,
+            expand_to_parent=not args.no_expand,
+        )
         print(json.dumps(results, indent=2, ensure_ascii=False))
         return 0
 
