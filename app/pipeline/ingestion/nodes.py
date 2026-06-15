@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.pipeline.chunk_pipeline import INPUT_PATH, OUTPUT_PATH, run_pipeline
-from app.pipeline.crawl_website import run_crawl, save_pages_json
+from app.pipeline.chunk import INPUT_PATH, OUTPUT_PATH, run_pipeline
+from app.pipeline.crawl import run_crawl, save_pages_json
 from app.pipeline.embedding.config import get_embedding_settings
-from app.pipeline.embedding_pipeline import run_indexing
+from app.pipeline.embedding.orchestrator import run_indexing
 from app.pipeline.ingestion.state import IngestionState
-from app.pipeline.language_pipeline import run_language_detection
+from app.pipeline.language import run_language_detection
 
 
 def crawl_node(state: IngestionState) -> dict:

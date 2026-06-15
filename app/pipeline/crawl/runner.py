@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from app.core.config import settings
-from app.utils.crawler.html_stage import crawl_html_pages
-from app.utils.crawler.models import CrawledPage
-from app.utils.crawler.pdf_stage import crawl_pdfs
-from app.utils.crawler.runtime import run_async
-from app.utils.crawler.storage import save_pages_json
+from app.pipeline.crawl.html_stage import crawl_html_pages
+from app.pipeline.crawl.models import CrawledPage
+from app.pipeline.crawl.pdf_stage import crawl_pdfs
+from app.pipeline.crawl.runtime import run_async
+from app.pipeline.crawl.storage import save_pages_json
 
 
 async def crawl_website(
@@ -55,7 +55,7 @@ def run_crawl(
     """Synchronous wrapper around :func:`crawl_website`.
 
     When ``save_json`` is True, the crawled results are written to a JSON file
-    under :data:`app.utils.crawler.config.OUTPUT_DIR`.
+    under :data:`app.pipeline.crawl.config.OUTPUT_DIR`.
     """
     start_url = url or settings.website_url
     pages = run_async(

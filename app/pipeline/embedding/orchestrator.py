@@ -1,22 +1,11 @@
-"""Hybrid RAG indexing pipeline: orchestrator and CLI.
+"""Hybrid RAG indexing pipeline orchestrator.
 
 Indexes pre-chunked JSON into Qdrant using OpenAI dense embeddings
 (``text-embedding-3-large``) and a rank-bm25 sparse encoder, enabling hybrid
 (dense + sparse) retrieval.
 
-Usage
------
-Index the default chunked data file::
-
-    python -m app.pipeline.embedding_pipeline index
-
-Recreate the collection from scratch::
-
-    python -m app.pipeline.embedding_pipeline index --recreate
-
-Run a hybrid search::
-
-    python -m app.pipeline.embedding_pipeline search --query "TEG levels" --top-k 5
+The command-line interface lives in ``scripts/embedding.py``; this module only
+exposes the reusable :func:`run_indexing` and :func:`run_search` functions.
 
 Requires ``OPENAI_API_KEY`` in the environment/.env and a reachable Qdrant
 instance (defaults to ``http://localhost:6333``).
@@ -24,8 +13,6 @@ instance (defaults to ``http://localhost:6333``).
 
 from __future__ import annotations
 
-import argparse
-import json
 import logging
 from pathlib import Path
 
@@ -96,78 +83,3 @@ def run_search(
     """Convenience wrapper that builds a retriever and runs one search."""
     retriever = HybridRetriever.from_settings(settings)
     return retriever.search(query, top_k=top_k, expand_to_parent=expand_to_parent)
-
-
-def _configure_logging(verbose: bool) -> None:
-    logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.INFO,
-        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
-    )
-
-
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="embedding_pipeline",
-        description="Hybrid RAG indexing and retrieval over Qdrant.",
-    )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logging")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    index_parser = subparsers.add_parser("index", help="Index chunked JSON into Qdrant")
-    index_parser.add_argument(
-        "--input",
-        type=Path,
-        default=None,
-        help="Path to chunked_data.json (defaults to configured input_path)",
-    )
-    index_parser.add_argument(
-        "--recreate",
-        action="store_true",
-        help="Drop and recreate the Qdrant collection before indexing",
-    )
-
-    search_parser = subparsers.add_parser("search", help="Run a hybrid search")
-    search_parser.add_argument("--query", required=True, help="Search query text")
-    search_parser.add_argument("--top-k", type=int, default=10, help="Number of hits")
-    search_parser.add_argument(
-        "--no-expand",
-        action="store_true",
-        help="Return matched child chunks only, without parent-section expansion",
-    )
-
-    return parser
-
-
-def main(argv: list[str] | None = None) -> int:
-    """CLI entry point. Returns a process exit code."""
-    parser = _build_parser()
-    args = parser.parse_args(argv)
-    _configure_logging(args.verbose)
-
-    settings = get_embedding_settings()
-
-    if args.command == "index":
-        summary = run_indexing(
-            settings=settings,
-            input_path=args.input,
-            recreate=args.recreate,
-        )
-        print(json.dumps(summary.model_dump(), indent=2))
-        return 0
-
-    if args.command == "search":
-        results = run_search(
-            args.query,
-            top_k=args.top_k,
-            settings=settings,
-            expand_to_parent=not args.no_expand,
-        )
-        print(json.dumps(results, indent=2, ensure_ascii=False))
-        return 0
-
-    parser.error(f"Unknown command: {args.command}")
-    return 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

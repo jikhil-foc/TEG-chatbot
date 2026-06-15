@@ -4,39 +4,11 @@ from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 
-from app.pipeline.chunk_pipeline import (
-    INPUT_PATH,
-    OUTPUT_PATH,
-    run_pipeline,
-)
+from app.pipeline.chunk import INPUT_PATH, OUTPUT_PATH, run_pipeline
+from app.schemas.chunk import ChunkingSummaryModel, ChunkRequest, ChunkResponse
 
 router = APIRouter()
-
-
-class ChunkRequest(BaseModel):
-    input_file: str | None = Field(
-        default=None,
-        description="Path to crawled-data.json; defaults to the standard output file",
-    )
-    save_json: bool = True
-
-
-class ChunkingSummaryModel(BaseModel):
-    total_pages_loaded: int
-    html_pages_processed: int
-    html_parent_chunks: int
-    html_child_chunks: int
-    pdf_pages_processed: int
-    pdf_child_chunks: int
-    total_child_chunks: int
-
-
-class ChunkResponse(BaseModel):
-    source_url: str
-    output_file: str | None = None
-    summary: ChunkingSummaryModel
 
 
 @router.post("", response_model=ChunkResponse)

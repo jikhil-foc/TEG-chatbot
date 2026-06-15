@@ -1,6 +1,8 @@
+"""Aggregates all v1 route routers into a single ``api_router``."""
+
 from fastapi import APIRouter
 
-from app.api.routes import ask, chat, chunk, crawl, embedding, health, pipeline
+from app.api.v1.routes import ask, chat, chunk, crawl, embedding, health, pipeline
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])

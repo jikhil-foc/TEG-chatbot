@@ -23,4 +23,7 @@ class AnswerResult(BaseModel):
     """The grounded answer and the sources it was derived from."""
 
     answer: str
+    language: str | None = Field(
+        default=None, description="Detected query language the answer replies in"
+    )
     sources: list[Source] = Field(default_factory=list)

@@ -13,7 +13,7 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "output"
+from app.core.paths import BM25_STATE_PATH, CHUNKED_DATA_PATH
 
 
 class EmbeddingSettings(BaseSettings):
@@ -67,8 +67,8 @@ class EmbeddingSettings(BaseSettings):
     )
 
     # Filesystem paths.
-    input_path: Path = _OUTPUT_DIR / "chunked_data.json"
-    bm25_state_path: Path = _OUTPUT_DIR / "bm25_state.json"
+    input_path: Path = CHUNKED_DATA_PATH
+    bm25_state_path: Path = BM25_STATE_PATH
 
     @property
     def token_encoding(self) -> str:

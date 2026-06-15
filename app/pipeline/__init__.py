@@ -1,1 +1,1 @@
-"""Data processing pipelines (crawl facade and chunking)."""
+"""Data processing pipeline stages (crawl, language, chunk, embedding, ingestion, qa)."""

@@ -8,13 +8,13 @@ from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
 from crawl4ai.deep_crawling import BFSDeepCrawlStrategy
 from crawl4ai.deep_crawling.filters import FilterChain, URLPatternFilter
 
-from app.utils.crawler.config import (
+from app.pipeline.crawl.config import (
     EXCLUDED_PATTERNS,
     EXCLUDED_SELECTOR,
     EXCLUDED_TAGS,
 )
-from app.utils.crawler.models import CrawledPage
-from app.utils.crawler.text import detect_language, to_markdown
+from app.pipeline.crawl.models import CrawledPage
+from app.pipeline.crawl.text import detect_language, to_markdown
 
 
 def collect_pdf_links(result, base_url: str, same_domain: bool) -> set[str]:

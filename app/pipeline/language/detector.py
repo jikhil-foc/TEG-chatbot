@@ -11,10 +11,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.utils.crawler.config import OUTPUT_DIR, OUTPUT_FILENAME
-from app.utils.crawler.text import detect_language_from_text
+from app.core.paths import CRAWLED_DATA_PATH
+from app.pipeline.crawl.text import detect_language_from_text
 
-DEFAULT_INPUT_PATH = OUTPUT_DIR / OUTPUT_FILENAME
+DEFAULT_INPUT_PATH = CRAWLED_DATA_PATH
 
 
 @dataclass

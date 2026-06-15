@@ -20,8 +20,8 @@ _SYSTEM_PROMPT = (
     "question using ONLY the information in the provided context. Be concise "
     "and accurate. Cite the sources you use inline with bracketed numbers that "
     "match the context, e.g. [1] or [2][3]. If the context does not contain "
-    "enough information to answer, say that you don't know based on the "
-    "available information. Do not invent facts or cite sources not provided."
+    "enough information to answer, politely ask the user to ask a question "
+    "related to TEG. Do not invent facts or cite sources not provided."
 )
 
 
@@ -59,7 +59,10 @@ def generate_answer(
     language (e.g. ``"Irish"`` or ``"English"``).
     """
     if not reranked:
-        return "I don't know based on the available information."
+        return (
+            "Please ask questions related to TEG. "
+            "I'm here to help with TEG website content."
+        )
 
     settings = settings or get_embedding_settings()
     context = _build_context(reranked)

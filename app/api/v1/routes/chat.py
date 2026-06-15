@@ -1,15 +1,8 @@
-from pydantic import BaseModel, Field
 from fastapi import APIRouter
 
+from app.schemas.chat import ChatRequest, ChatResponse
+
 router = APIRouter()
-
-
-class ChatRequest(BaseModel):
-    message: str = Field(..., min_length=1, max_length=4000)
-
-
-class ChatResponse(BaseModel):
-    reply: str
 
 
 @router.post("", response_model=ChatResponse)

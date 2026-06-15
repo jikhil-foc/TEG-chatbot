@@ -2,39 +2,14 @@ import asyncio
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 
 from app.pipeline.embedding.cache import get_retriever, invalidate_retriever
 from app.pipeline.embedding.config import get_embedding_settings
 from app.pipeline.embedding.models import IndexSummary, SearchResult
-from app.pipeline.embedding_pipeline import run_indexing
+from app.pipeline.embedding.orchestrator import run_indexing
+from app.schemas.embedding import IndexRequest, SearchRequest, SearchResponse
 
 router = APIRouter()
-
-
-class IndexRequest(BaseModel):
-    input_file: str | None = Field(
-        default=None,
-        description="Path to chunked_data.json; defaults to the configured input path",
-    )
-    recreate: bool = Field(
-        default=False,
-        description="Drop and recreate the Qdrant collection before indexing",
-    )
-
-
-class SearchRequest(BaseModel):
-    query: str = Field(..., min_length=1, max_length=4000)
-    top_k: int = Field(default=10, ge=1, le=100)
-    expand_to_parent: bool = Field(
-        default=True,
-        description="Expand each match to its full parent section before returning",
-    )
-
-
-class SearchResponse(BaseModel):
-    query: str
-    results: list[SearchResult]
 
 
 @router.post("/index", response_model=IndexSummary)

@@ -6,23 +6,23 @@ PDF documents discovered during the crawl. The starting URL defaults to the
 
 The crawl is split into stages, one module each:
 
-* :mod:`app.utils.crawler.config` -- shared constants/configuration.
-* :mod:`app.utils.crawler.models` -- the :class:`CrawledPage` data model.
-* :mod:`app.utils.crawler.text` -- markdown cleanup and language detection.
-* :mod:`app.utils.crawler.html_stage` -- HTML deep crawl + PDF link discovery.
-* :mod:`app.utils.crawler.pdf_stage` -- PDF fetch and text extraction.
-* :mod:`app.utils.crawler.storage` -- JSON persistence.
-* :mod:`app.utils.crawler.runner` -- orchestration and entry points.
+* :mod:`app.pipeline.crawl.config` -- shared constants/configuration.
+* :mod:`app.pipeline.crawl.models` -- the :class:`CrawledPage` data model.
+* :mod:`app.pipeline.crawl.text` -- markdown cleanup and language detection.
+* :mod:`app.pipeline.crawl.html_stage` -- HTML deep crawl + PDF link discovery.
+* :mod:`app.pipeline.crawl.pdf_stage` -- PDF fetch and text extraction.
+* :mod:`app.pipeline.crawl.storage` -- JSON persistence.
+* :mod:`app.pipeline.crawl.runner` -- orchestration and entry points.
 """
 
 from __future__ import annotations
 
-from app.utils.crawler.config import OUTPUT_DIR, OUTPUT_FILENAME
-from app.utils.crawler.html_stage import crawl_html_pages
-from app.utils.crawler.models import CrawledPage
-from app.utils.crawler.pdf_stage import crawl_pdfs
-from app.utils.crawler.runner import crawl_website, run_crawl
-from app.utils.crawler.storage import save_pages_json
+from app.pipeline.crawl.config import OUTPUT_DIR, OUTPUT_FILENAME
+from app.pipeline.crawl.html_stage import crawl_html_pages
+from app.pipeline.crawl.models import CrawledPage
+from app.pipeline.crawl.pdf_stage import crawl_pdfs
+from app.pipeline.crawl.runner import crawl_website, run_crawl
+from app.pipeline.crawl.storage import save_pages_json
 
 __all__ = [
     "CrawledPage",

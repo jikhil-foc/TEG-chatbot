@@ -9,15 +9,15 @@ from app.pipeline.llm.models import Source
 from app.pipeline.llm.reranker import rerank
 from app.pipeline.qa.state import QAState
 from app.pipeline.qa.validator import validate_answer
-from app.utils.crawler.text import detect_language_from_text
+from app.pipeline.crawl.text import detect_language_from_text
 
 _DEFAULT_LANGUAGE = "English"
 
 # Canned fallback answers keyed by detected language, used when the relevance
 # gate decides the retrieved context is too weak to answer from.
 _FALLBACK_MESSAGES = {
-    "English": "I don't have enough information based on the available content.",
-    "Irish": "Níl go leor eolais agam bunaithe ar an ábhar atá ar fáil.",
+    "English": "Please ask questions related to TEG. I'm here to help with TEG website content.",
+    "Irish": "Cuir ceist a bhaineann le TEG, le do thoil. Tá mé anseo chun cabhrú le hábhar láithreán TEG.",
 }
 
 # Matches inline citation markers such as ``[1]`` or ``[12]`` in an answer.

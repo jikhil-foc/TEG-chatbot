@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import httpx
 
-OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "output"
-OUTPUT_FILENAME = "crawled-data.json"
+from app.core.paths import CRAWLED_DATA_FILENAME, DATA_DIR
+
+OUTPUT_DIR = DATA_DIR
+OUTPUT_FILENAME = CRAWLED_DATA_FILENAME
 
 # File types skipped during the HTML (browser) crawl phase. PDFs are still
 # discovered via page links and handled separately by the PDF stage.

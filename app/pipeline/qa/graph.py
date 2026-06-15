@@ -122,5 +122,6 @@ def run_qa_pipeline(
 
     return AnswerResult(
         answer=final_state.get("answer", ""),
+        language=final_state.get("language"),
         sources=final_state.get("sources", []),
     )

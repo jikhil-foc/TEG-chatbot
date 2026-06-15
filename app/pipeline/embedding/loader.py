@@ -1,7 +1,7 @@
 """Load pre-chunked JSON documents into LangChain ``Document`` objects.
 
 The chunked JSON is a flat array produced by
-:mod:`app.pipeline.chunk_pipeline`. Each record is mapped to a ``Document``
+:mod:`app.pipeline.chunk`. Each record is mapped to a ``Document``
 whose ``metadata`` carries exactly the fields required for indexing/retrieval,
 with ``token_count`` computed locally via ``tiktoken`` (it is not present in the
 source file).

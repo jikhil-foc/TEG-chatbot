@@ -7,8 +7,8 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.utils.crawler.config import OUTPUT_DIR, OUTPUT_FILENAME
-from app.utils.crawler.models import CrawledPage
+from app.pipeline.crawl.config import OUTPUT_DIR, OUTPUT_FILENAME
+from app.pipeline.crawl.models import CrawledPage
 
 
 def save_pages_json(

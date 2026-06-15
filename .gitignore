@@ -34,3 +34,6 @@ htmlcov/
 .vscode/
 *.swp
 *.swo
+
+# Runtime data artifacts (crawl/chunk/index output)
+/data/

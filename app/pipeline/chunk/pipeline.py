@@ -16,7 +16,7 @@ greedily up to the parent token target for retrieval context. ``tiktoken``
 does not load or call any model.
 
 This module is independent of the website crawler; it reads the JSON output
-produced by :mod:`app.pipeline.crawl_website`.
+produced by :mod:`app.pipeline.crawl`.
 """
 
 from __future__ import annotations
@@ -34,8 +34,10 @@ from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
 )
 
-INPUT_PATH = Path(__file__).resolve().parent.parent / "output" / "crawled-data.json"
-OUTPUT_PATH = Path(__file__).resolve().parent.parent / "output" / "chunked_data.json"
+from app.core.paths import CHUNKED_DATA_PATH, CRAWLED_DATA_PATH
+
+INPUT_PATH = CRAWLED_DATA_PATH
+OUTPUT_PATH = CHUNKED_DATA_PATH
 
 _MARKDOWN_HEADERS = [("#", "h1"), ("##", "h2"), ("###", "h3")]
 

@@ -8,9 +8,9 @@ from io import BytesIO
 import httpx
 import pypdf
 
-from app.utils.crawler.config import PDF_FETCH_TIMEOUT, PDF_MAX_CONCURRENT
-from app.utils.crawler.models import CrawledPage
-from app.utils.crawler.text import clean_markdown, detect_language_from_text
+from app.pipeline.crawl.config import PDF_FETCH_TIMEOUT, PDF_MAX_CONCURRENT
+from app.pipeline.crawl.models import CrawledPage
+from app.pipeline.crawl.text import clean_markdown, detect_language_from_text
 
 
 def _pdf_metadata(reader: pypdf.PdfReader) -> dict:
