@@ -12,6 +12,7 @@ import logging
 
 from langgraph.graph import END, START, StateGraph
 
+from app.core.langsmith import build_run_config, configure_langsmith
 from app.pipeline.embedding.config import EmbeddingSettings, get_embedding_settings
 from app.pipeline.embedding.retriever import HybridRetriever
 from app.pipeline.llm.models import AnswerResult
@@ -107,6 +108,8 @@ def run_qa_pipeline(
         query,
     )
 
+    configure_langsmith()
+
     initial_state: QAState = {
         "query": query,
         "top_k": top_k,
@@ -118,7 +121,14 @@ def run_qa_pipeline(
         "steps_completed": [],
     }
 
-    final_state = _get_graph().invoke(initial_state)
+    final_state = _get_graph().invoke(
+        initial_state,
+        config=build_run_config(
+            run_name="qa_pipeline",
+            tags=["qa", "ask"],
+            metadata={"query": query[:500]},
+        ),
+    )
 
     return AnswerResult(
         answer=final_state.get("answer", ""),

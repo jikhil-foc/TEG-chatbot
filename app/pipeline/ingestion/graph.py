@@ -5,6 +5,7 @@ from __future__ import annotations
 from langgraph.graph import END, START, StateGraph
 
 from app.core.config import settings
+from app.core.langsmith import build_run_config, configure_langsmith
 from app.pipeline.embedding.models import IndexSummary
 from app.pipeline.ingestion.models import (
     ChunkStepSummary,
@@ -100,7 +101,19 @@ def _state_to_result(state: IngestionState) -> IngestionResult:
 
 def run_ingestion_pipeline(config: IngestionConfig | None = None) -> IngestionResult:
     """Run the full crawl → language → chunk → embed ingestion graph."""
+    configure_langsmith()
     config = config or IngestionConfig()
     graph = _get_graph()
-    final_state = graph.invoke(_build_initial_state(config))
+    final_state = graph.invoke(
+        _build_initial_state(config),
+        config=build_run_config(
+            run_name="ingestion_pipeline",
+            tags=["ingestion"],
+            metadata={
+                "url": config.url or settings.website_url,
+                "max_depth": config.max_depth,
+                "recreate": config.recreate,
+            },
+        ),
+    )
     return _state_to_result(final_state)
