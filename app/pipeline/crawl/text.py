@@ -30,6 +30,13 @@ _WORD_RE = re.compile(r"[a-zà-ÿáéíóú]+", re.IGNORECASE)
 # this, stopword counts are too noisy to be reliable, so we return ``None``.
 _MIN_TOKENS = 20
 
+# User queries are much shorter than crawled pages; a lower bar is enough when
+# combined with síneadh fada (Irish accent marks) as an extra signal.
+_MIN_QUERY_TOKENS = 3
+
+# Irish vowels with síneadh fada — rare in English prose, strong Irish signal.
+_FADA_RE = re.compile(r"[áéíóú]", re.IGNORECASE)
+
 # High-frequency Irish function words (articles, conjunctions, prepositions,
 # pronouns, common verb forms). These barely overlap with English, which makes
 # them a strong signal for distinguishing the two languages.
@@ -39,6 +46,9 @@ _IRISH_STOPWORDS = frozenset({
     "faoi", "roimh", "thar", "idir", "gach", "aon", "ag", "anseo", "siad",
     "sé", "sí", "muid", "sinn", "bhfuil", "raibh", "beidh", "ina", "lena",
     "uile", "féin", "cuid", "leis", "agat", "againn", "acu", "orthu",
+    # Common in short user questions
+    "cé", "cad", "conas", "cén", "cá", "más", "má", "gur", "nach", "dar",
+    "ceist", "freagra", "dírithe", "scrúdú", "scrúduithe",
 })
 
 # High-frequency English function words. Note ``an`` is intentionally omitted
@@ -72,6 +82,23 @@ def to_markdown(result) -> str:
     return clean_markdown(text)
 
 
+def _score_language(tokens: list[str], *, include_fada: bool) -> tuple[int, int]:
+    """Return Irish and English hit counts for tokenised text."""
+    irish = sum(t in _IRISH_STOPWORDS for t in tokens)
+    if include_fada:
+        irish += sum(1 for t in tokens if _FADA_RE.search(t))
+    english = sum(t in _ENGLISH_STOPWORDS for t in tokens)
+    return irish, english
+
+
+def _language_from_scores(irish: int, english: int) -> str | None:
+    if irish == 0 and english == 0:
+        return None
+    if irish == english:
+        return None
+    return "Irish" if irish > english else "English"
+
+
 def detect_language_from_text(text: str) -> str | None:
     """Guess Irish vs English by counting language-specific function words.
 
@@ -85,13 +112,21 @@ def detect_language_from_text(text: str) -> str | None:
     tokens = [t.lower() for t in _WORD_RE.findall(text)]
     if len(tokens) < _MIN_TOKENS:
         return None
-    irish = sum(t in _IRISH_STOPWORDS for t in tokens)
-    english = sum(t in _ENGLISH_STOPWORDS for t in tokens)
-    if irish == 0 and english == 0:
+    return _language_from_scores(*_score_language(tokens, include_fada=False))
+
+
+def detect_query_language(text: str) -> str | None:
+    """Guess Irish vs English for short user queries.
+
+    Uses a lower token threshold than :func:`detect_language_from_text` and
+    treats síneadh fada (``áéíóú``) in tokens as an additional Irish signal.
+    """
+    if not text:
         return None
-    if irish == english:
+    tokens = [t.lower() for t in _WORD_RE.findall(text)]
+    if len(tokens) < _MIN_QUERY_TOKENS:
         return None
-    return "Irish" if irish > english else "English"
+    return _language_from_scores(*_score_language(tokens, include_fada=True))
 
 
 def detect_language(result) -> str | None:

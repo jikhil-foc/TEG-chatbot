@@ -9,7 +9,7 @@ from app.pipeline.llm.models import Source
 from app.pipeline.llm.reranker import rerank
 from app.pipeline.qa.state import QAState
 from app.pipeline.qa.validator import validate_answer
-from app.pipeline.crawl.text import detect_language_from_text
+from app.pipeline.crawl.text import detect_query_language
 
 _DEFAULT_LANGUAGE = "English"
 
@@ -38,7 +38,7 @@ def _to_source(hit: dict) -> Source:
 
 def detect_language_node(state: QAState) -> dict:
     """Detect the query language so the answer can reply in kind."""
-    language = detect_language_from_text(state["query"]) or _DEFAULT_LANGUAGE
+    language = detect_query_language(state["query"]) or _DEFAULT_LANGUAGE
     steps = list(state.get("steps_completed", []))
     steps.append("detect_language")
     return {"language": language, "steps_completed": steps}
