@@ -25,6 +25,13 @@ _SYSTEM_PROMPT = (
 )
 
 
+def _language_instruction(language: str | None) -> str:
+    """Build a system instruction asking the model to reply in ``language``."""
+    if not language:
+        return ""
+    return f" Respond in {language}."
+
+
 def _build_context(reranked: list[dict]) -> str:
     """Render reranked hits into a numbered, citable context block."""
     blocks: list[str] = []
@@ -44,8 +51,13 @@ def generate_answer(
     query: str,
     reranked: list[dict],
     settings: EmbeddingSettings | None = None,
+    language: str | None = None,
 ) -> str:
-    """Generate a grounded answer to ``query`` from the ``reranked`` context."""
+    """Generate a grounded answer to ``query`` from the ``reranked`` context.
+
+    When ``language`` is provided the model is instructed to reply in that
+    language (e.g. ``"Irish"`` or ``"English"``).
+    """
     if not reranked:
         return "I don't know based on the available information."
 
@@ -53,7 +65,7 @@ def generate_answer(
     context = _build_context(reranked)
 
     messages = [
-        SystemMessage(content=_SYSTEM_PROMPT),
+        SystemMessage(content=_SYSTEM_PROMPT + _language_instruction(language)),
         HumanMessage(content=f"Context:\n{context}\n\nQuestion: {query}"),
     ]
 

@@ -52,6 +52,20 @@ class EmbeddingSettings(BaseSettings):
     bm25_k1: float = 1.5
     bm25_b: float = 0.75
 
+    # QA pipeline behaviour.
+    rerank_relevance_threshold: float = Field(
+        default=0.0,
+        description=(
+            "Minimum top cross-encoder rerank_score required to answer; below "
+            "this the relevance gate routes to the canned fallback answer"
+        ),
+    )
+    qa_max_validation_retries: int = Field(
+        default=2,
+        ge=0,
+        description="Max answer regenerations when the validation agent fails",
+    )
+
     # Filesystem paths.
     input_path: Path = _OUTPUT_DIR / "chunked_data.json"
     bm25_state_path: Path = _OUTPUT_DIR / "bm25_state.json"
