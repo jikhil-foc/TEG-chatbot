@@ -81,8 +81,7 @@ _GREETING_FAREWELL_RE = re.compile(
 )
 
 _DEFAULT_CLARIFICATION = (
-    "For which exam or candidate group are you asking about fees? "
-    "For example, secondary school pupils, adults, or a specific TEG level."
+    "Which TEG exam, level, or candidate group are you asking about (e.g., secondary school pupils, adults, A2, B1, B2)?"
 )
 
 _ANALYZE_SYSTEM_PROMPT = (

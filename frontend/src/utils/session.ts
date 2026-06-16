@@ -14,3 +14,13 @@ export function getOrCreateSessionId(): string {
     return crypto.randomUUID();
   }
 }
+
+export function createNewSessionId(): string {
+  const sessionId = crypto.randomUUID();
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+  } catch {
+    // sessionStorage may be unavailable in restricted contexts
+  }
+  return sessionId;
+}

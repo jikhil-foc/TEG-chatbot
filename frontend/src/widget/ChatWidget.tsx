@@ -1,10 +1,21 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { askQuestionStream, ChatApiError } from "@/api/chat";
 import { ChatInput } from "@/components/ChatInput";
 import { MessageList } from "@/components/MessageList";
-import type { ChatMessage, ChatWidgetConfig, ConversationMessage } from "@/types";
+import type {
+  ChatMessage,
+  ChatWidgetConfig,
+  ConversationMessage,
+} from "@/types";
 import { createMessageId } from "@/utils/id";
-import { getOrCreateSessionId } from "@/utils/session";
+import { createNewSessionId, getOrCreateSessionId } from "@/utils/session";
 import "@/styles/widget.css";
 
 const DEFAULT_CONFIG: Required<ChatWidgetConfig> = {
@@ -12,13 +23,25 @@ const DEFAULT_CONFIG: Required<ChatWidgetConfig> = {
   title: "TEG Assistant",
   subtitle: "Ask about TEG levels, exams, and services",
   placeholder: "Ask a question…",
-  welcomeMessage:
-    "Hello! I can help answer questions about TEG based on our published content. What would you like to know?",
+  welcomeMessage: `👋 Hi! I'm the TEG Assistant.
+
+Ask me a question about TEG, and I'll help using information from the official TEG website.
+`,
   position: "bottom-right",
   primaryColor: "#0d6b4f",
 };
 
 export interface ChatWidgetProps extends ChatWidgetConfig {}
+
+function createWelcomeMessages(welcomeMessage: string): ChatMessage[] {
+  return [
+    {
+      id: createMessageId(),
+      role: "assistant",
+      content: welcomeMessage,
+    },
+  ];
+}
 
 export function ChatWidget({
   apiBaseUrl = DEFAULT_CONFIG.apiBaseUrl,
@@ -36,13 +59,9 @@ export function ChatWidget({
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    {
-      id: createMessageId(),
-      role: "assistant",
-      content: welcomeMessage,
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() =>
+    createWelcomeMessages(welcomeMessage),
+  );
 
   const resolvedApiUrl =
     apiBaseUrl || (import.meta.env.DEV ? "" : window.location.origin);
@@ -61,131 +80,144 @@ export function ChatWidget({
     setIsOpen((open) => !open);
   }, []);
 
-  const sendMessage = useCallback(async (text?: string) => {
-    const query = (text ?? input).trim();
-    if (!query || isLoading) {
-      return;
-    }
-
-    const priorMessages: ConversationMessage[] = messages
-      .filter(
-        (message) =>
-          !message.streaming && !message.error && message.content.trim().length > 0,
-      )
-      .slice(-10)
-      .map((message) => ({
-        role: message.role,
-        content: message.content,
-      }));
-
-    const userMessage: ChatMessage = {
-      id: createMessageId(),
-      role: "user",
-      content: query,
-    };
-
-    const assistantId = createMessageId();
-
-    setMessages((prev) => [
-      ...prev,
-      userMessage,
-      {
-        id: assistantId,
-        role: "assistant",
-        content: "",
-        streaming: true,
-      },
-    ]);
-    setInput("");
-    setIsLoading(true);
-
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      await askQuestionStream(
-        resolvedApiUrl,
-        {
-          query,
-          messages: priorMessages,
-          session_id: sessionIdRef.current,
-        },
-        {
-          onToken: (content) => {
-            setMessages((prev) =>
-              prev.map((message) =>
-                message.id === assistantId
-                  ? { ...message, content: message.content + content }
-                  : message,
-              ),
-            );
-          },
-          onDone: (response) => {
-            setMessages((prev) =>
-              prev.map((message) =>
-                message.id === assistantId
-                  ? {
-                      ...message,
-                      content: response.answer,
-                      sources: response.sources,
-                      language: response.language,
-                      relatedQuestions: response.related_questions,
-                      streaming: false,
-                    }
-                  : message,
-              ),
-            );
-          },
-          onError: (message) => {
-            setMessages((prev) =>
-              prev.map((entry) =>
-                entry.id === assistantId
-                  ? {
-                      ...entry,
-                      content: message,
-                      error: true,
-                      streaming: false,
-                    }
-                  : entry,
-              ),
-            );
-          },
-        },
-        controller.signal,
-      );
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        setMessages((prev) => prev.filter((message) => message.id !== assistantId));
+  const sendMessage = useCallback(
+    async (text?: string) => {
+      const query = (text ?? input).trim();
+      if (!query || isLoading) {
         return;
       }
 
-      const detail =
-        error instanceof ChatApiError
-          ? error.message
-          : "Something went wrong. Please try again.";
+      const priorMessages: ConversationMessage[] = messages
+        .filter(
+          (message) =>
+            !message.streaming &&
+            !message.error &&
+            message.content.trim().length > 0,
+        )
+        .slice(-10)
+        .map((message) => ({
+          role: message.role,
+          content: message.content,
+        }));
 
-      setMessages((prev) =>
-        prev.map((message) =>
-          message.id === assistantId
-            ? {
-                ...message,
-                content: detail,
-                error: true,
-                streaming: false,
-              }
-            : message,
-        ),
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [input, isLoading, messages, resolvedApiUrl]);
+      const userMessage: ChatMessage = {
+        id: createMessageId(),
+        role: "user",
+        content: query,
+      };
+
+      const assistantId = createMessageId();
+
+      setMessages((prev) => [
+        ...prev,
+        userMessage,
+        {
+          id: assistantId,
+          role: "assistant",
+          content: "",
+          streaming: true,
+        },
+      ]);
+      setInput("");
+      setIsLoading(true);
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        await askQuestionStream(
+          resolvedApiUrl,
+          {
+            query,
+            messages: priorMessages,
+            session_id: sessionIdRef.current,
+            top_k: 5,
+            rerank_top_n: 2,
+          },
+          {
+            onToken: (content) => {
+              setMessages((prev) =>
+                prev.map((message) =>
+                  message.id === assistantId
+                    ? { ...message, content: message.content + content }
+                    : message,
+                ),
+              );
+            },
+            onDone: (response) => {
+              setMessages((prev) =>
+                prev.map((message) =>
+                  message.id === assistantId
+                    ? {
+                        ...message,
+                        content: response.answer,
+                        sources: response.sources,
+                        language: response.language,
+                        relatedQuestions: response.related_questions,
+                        streaming: false,
+                      }
+                    : message,
+                ),
+              );
+            },
+            onError: (message) => {
+              setMessages((prev) =>
+                prev.map((entry) =>
+                  entry.id === assistantId
+                    ? {
+                        ...entry,
+                        content: message,
+                        error: true,
+                        streaming: false,
+                      }
+                    : entry,
+                ),
+              );
+            },
+          },
+          controller.signal,
+        );
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          setMessages((prev) =>
+            prev.filter((message) => message.id !== assistantId),
+          );
+          return;
+        }
+
+        const detail =
+          error instanceof ChatApiError
+            ? error.message
+            : "Something went wrong. Please try again.";
+
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId
+              ? {
+                  ...message,
+                  content: detail,
+                  error: true,
+                  streaming: false,
+                }
+              : message,
+          ),
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [input, isLoading, messages, resolvedApiUrl],
+  );
 
   const latestAssistantMessageId = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const message = messages[index];
-      if (message.role === "assistant" && !message.streaming && !message.error) {
+      if (
+        message.role === "assistant" &&
+        !message.streaming &&
+        !message.error
+      ) {
         return message.id;
       }
     }
@@ -198,6 +230,15 @@ export function ChatWidget({
     },
     [sendMessage],
   );
+
+  const startNewChat = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    sessionIdRef.current = createNewSessionId();
+    setInput("");
+    setIsLoading(false);
+    setMessages(createWelcomeMessages(welcomeMessage));
+  }, [welcomeMessage]);
 
   return (
     <div
@@ -222,14 +263,25 @@ export function ChatWidget({
                 {subtitle}
               </p>
             </div>
-            <button
-              type="button"
-              className="teg-widget__close"
-              onClick={toggleOpen}
-              aria-label="Close chat"
-            >
-              <CloseIcon />
-            </button>
+            <div className="teg-widget__header-actions">
+              <button
+                type="button"
+                className="teg-widget__icon-btn"
+                onClick={startNewChat}
+                aria-label="Start new chat"
+                title="New chat"
+              >
+                <NewChatIcon />
+              </button>
+              <button
+                type="button"
+                className="teg-widget__icon-btn"
+                onClick={toggleOpen}
+                aria-label="Close chat"
+              >
+                <CloseIcon />
+              </button>
+            </div>
           </header>
 
           <MessageList
@@ -265,9 +317,34 @@ export function ChatWidget({
   );
 }
 
+function NewChatIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 5v14M5 12h14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function ChatIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8l-4 4V5a1 1 0 0 1 1-1Z"
         stroke="currentColor"
@@ -280,7 +357,13 @@ function ChatIcon() {
 
 function CloseIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M6 6l12 12M18 6 6 18"
         stroke="currentColor"

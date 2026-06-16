@@ -132,7 +132,14 @@
   opacity: 0.92;
 }
 
-.teg-widget__close {
+.teg-widget__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.teg-widget__icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -145,13 +152,18 @@
   cursor: pointer;
 }
 
-.teg-widget__close:hover {
+.teg-widget__icon-btn:hover {
   background: rgba(255, 255, 255, 0.24);
 }
 
-.teg-widget__close:focus-visible {
+.teg-widget__icon-btn:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
+}
+
+.teg-widget__icon-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .teg-message-list {
