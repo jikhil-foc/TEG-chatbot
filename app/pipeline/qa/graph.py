@@ -1,6 +1,6 @@
 """LangGraph workflow builder and entry point for question answering.
 
-Wires the QA steps -- detect language, hybrid retrieval, BGE rerank, relevance
+Wires the QA steps -- detect language, hybrid retrieval, Cohere rerank, relevance
 gate, answer generation, citation extraction, and an LLM validation retry loop
 -- into a compiled graph, mirroring the ingestion graph in
 :mod:`app.pipeline.ingestion.graph`.

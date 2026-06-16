@@ -7,6 +7,7 @@ Builds a numbered context block from reranked hits and prompts
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -76,3 +77,48 @@ def generate_answer(
     model = build_chat_model(settings)
     response = model.invoke(messages)
     return str(response.content).strip()
+
+
+def _chunk_content(chunk_content: object) -> str:
+    """Normalise streamed model chunks to plain text."""
+    if isinstance(chunk_content, str):
+        return chunk_content
+    if isinstance(chunk_content, list):
+        parts: list[str] = []
+        for block in chunk_content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and block.get("type") == "text":
+                parts.append(str(block.get("text", "")))
+        return "".join(parts)
+    return str(chunk_content) if chunk_content else ""
+
+
+def generate_answer_stream(
+    query: str,
+    reranked: list[dict],
+    settings: EmbeddingSettings | None = None,
+    language: str | None = None,
+) -> Iterator[str]:
+    """Stream a grounded answer token-by-token from the ``reranked`` context."""
+    if not reranked:
+        yield (
+            "Please ask questions related to TEG. "
+            "I'm here to help with TEG website content."
+        )
+        return
+
+    settings = settings or get_embedding_settings()
+    context = _build_context(reranked)
+
+    messages = [
+        SystemMessage(content=_SYSTEM_PROMPT + _language_instruction(language)),
+        HumanMessage(content=f"Context:\n{context}\n\nQuestion: {query}"),
+    ]
+
+    logger.info("Streaming answer over %d reranked sources", len(reranked))
+    model = build_chat_model(settings)
+    for chunk in model.stream(messages):
+        text = _chunk_content(chunk.content)
+        if text:
+            yield text

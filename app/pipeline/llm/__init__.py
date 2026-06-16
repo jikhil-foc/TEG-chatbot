@@ -1,7 +1,7 @@
 """LLM-backed question answering over the hybrid RAG retriever.
 
 Pipeline: retrieve hybrid-search hits from Qdrant, rerank them with the
-``BAAI/bge-reranker-v2-m3`` cross-encoder, then generate a grounded, cited
+Cohere Rerank API, then generate a grounded, cited
 answer with OpenAI ``gpt-4o-mini``.
 """
 

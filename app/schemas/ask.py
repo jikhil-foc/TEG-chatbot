@@ -24,3 +24,26 @@ class AskResponse(BaseModel):
         default=None, description="Detected query language the answer replies in"
     )
     sources: list[Source]
+
+
+class AskStreamStatusEvent(BaseModel):
+    type: str = "status"
+    step: str
+
+
+class AskStreamTokenEvent(BaseModel):
+    type: str = "token"
+    content: str
+
+
+class AskStreamDoneEvent(BaseModel):
+    type: str = "done"
+    query: str
+    answer: str
+    language: str | None = None
+    sources: list[Source] = Field(default_factory=list)
+
+
+class AskStreamErrorEvent(BaseModel):
+    type: str = "error"
+    message: str

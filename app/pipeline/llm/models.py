@@ -15,7 +15,7 @@ class Source(BaseModel):
         default=0.0, description="Original hybrid-search score from retrieval"
     )
     rerank_score: float = Field(
-        default=0.0, description="Cross-encoder relevance score from reranking"
+        default=0.0, description="Cohere relevance score from reranking"
     )
 
 

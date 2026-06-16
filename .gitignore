@@ -37,3 +37,7 @@ htmlcov/
 
 # Runtime data artifacts (crawl/chunk/index output)
 /data/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

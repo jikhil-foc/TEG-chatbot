@@ -14,6 +14,16 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
+### Qdrant (required for `/ask` and search)
+
+The API stores embeddings in [Qdrant](https://qdrant.tech/). Start it locally before indexing or asking questions:
+
+```bash
+docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
+```
+
+Default URL: `http://localhost:6333` (override with `QDRANT_URL` in `.env`).
+
 ## Run
 
 ```bash
@@ -34,7 +44,7 @@ API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 | POST | `/api/v1/embedding/index` | Index chunks into Qdrant |
 | POST | `/api/v1/embedding/search` | Hybrid search |
 | POST | `/api/v1/pipeline/ingest` | Run the full crawl→index pipeline |
-| POST | `/api/v1/ask` | Ask a question (RAG) |
+| POST | `/api/v1/ask` | Ask a question (RAG, streamed via SSE) |
 
 ## Pipeline CLIs
 

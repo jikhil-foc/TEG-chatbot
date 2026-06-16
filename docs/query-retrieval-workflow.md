@@ -19,6 +19,7 @@ Detect Language → Retrieve → Rerank → Relevance Gate → Generate Answer �
 ```http
 POST /api/v1/ask
 Content-Type: application/json
+Accept: text/event-stream
 
 {
   "query": "What services does TEG provide?",
@@ -27,7 +28,16 @@ Content-Type: application/json
 }
 ```
 
-**Response shape**
+The response is **Server-Sent Events** (`text/event-stream`):
+
+| Event | Payload |
+|-------|---------|
+| `status` | `{ "type": "status", "step": "retrieve" \| "rerank" \| "generate" \| ... }` |
+| `token` | `{ "type": "token", "content": "..." }` — streamed answer text |
+| `done` | `{ "type": "done", "query", "answer", "language", "sources" }` |
+| `error` | `{ "type": "error", "message": "..." }` |
+
+**Final `done` event**
 
 - `answer` — grounded reply (or canned fallback if context is too weak)
 - `language` — detected query language (Irish or English)

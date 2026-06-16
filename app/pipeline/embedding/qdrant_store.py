@@ -49,6 +49,7 @@ class QdrantService:
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key,
             timeout=int(settings.qdrant_timeout),
+            check_compatibility=False,
         )
 
     @property

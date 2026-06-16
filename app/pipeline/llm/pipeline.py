@@ -21,7 +21,7 @@ def answer_question(
 ) -> AnswerResult:
     """Answer ``query`` end-to-end over the indexed corpus.
 
-    Runs the QA LangGraph workflow: detect language, hybrid retrieval, BGE
+    Runs the QA LangGraph workflow: detect language, hybrid retrieval, Cohere
     rerank, relevance gate (with fallback), grounded answer generation,
     citation extraction, and an LLM validation retry loop.
     """

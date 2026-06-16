@@ -1,0 +1,45 @@
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  background: #eef4f1;
+  color: #1a2b26;
+}
+
+.demo-page {
+  min-height: 100vh;
+  padding: 48px 24px 120px;
+}
+
+.demo-page__hero {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.demo-page__eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0d6b4f;
+}
+
+.demo-page__hero h1 {
+  margin: 0 0 12px;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+}
+
+.demo-page__hero p {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #3f524c;
+}
+
+.demo-page__hero code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #dce9e3;
+  font-size: 0.92em;
+}

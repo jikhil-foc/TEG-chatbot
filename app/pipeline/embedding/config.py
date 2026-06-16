@@ -29,6 +29,13 @@ class EmbeddingSettings(BaseSettings):
     # OpenAI dense embeddings.
     openai_api_key: str = Field(default="", description="OpenAI API key")
     openai_embedding_model: str = "text-embedding-3-large"
+
+    # Cohere reranking.
+    cohere_api_key: str = Field(default="", description="Cohere API key")
+    cohere_rerank_model: str = Field(
+        default="rerank-v3.5",
+        description="Cohere rerank model name",
+    )
     embedding_dim: int = 3072
     embedding_batch_size: int = Field(
         default=128,
@@ -56,7 +63,7 @@ class EmbeddingSettings(BaseSettings):
     rerank_relevance_threshold: float = Field(
         default=0.0,
         description=(
-            "Minimum top cross-encoder rerank_score required to answer; below "
+            "Minimum top Cohere rerank_score required to answer; below "
             "this the relevance gate routes to the canned fallback answer"
         ),
     )

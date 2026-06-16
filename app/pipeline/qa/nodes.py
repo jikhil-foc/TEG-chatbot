@@ -23,6 +23,15 @@ _FALLBACK_MESSAGES = {
 # Matches inline citation markers such as ``[1]`` or ``[12]`` in an answer.
 _CITATION_RE = re.compile(r"\[(\d+)\]")
 
+_OFF_TOPIC_MARKERS = tuple(
+    phrase.lower()
+    for phrase in (
+        *_FALLBACK_MESSAGES.values(),
+        "Please ask questions related to TEG.",
+        "I'm here to help with TEG website content.",
+    )
+)
+
 
 def _to_source(hit: dict) -> Source:
     """Map a reranked retriever hit to a :class:`Source`."""
@@ -53,8 +62,13 @@ def retrieve_node(state: QAState) -> dict:
 
 
 def rerank_node(state: QAState) -> dict:
-    """Rescore retrieved hits with the BGE cross-encoder reranker."""
-    reranked = rerank(state["query"], state.get("hits", []), top_n=state["rerank_top_n"])
+    """Rescore retrieved hits with the Cohere rerank API."""
+    reranked = rerank(
+        state["query"],
+        state.get("hits", []),
+        top_n=state["rerank_top_n"],
+        settings=state["settings"],
+    )
     steps = list(state.get("steps_completed", []))
     steps.append("rerank")
     return {"reranked": reranked, "steps_completed": steps}
@@ -87,10 +101,23 @@ def generate_answer_node(state: QAState) -> dict:
     return {"answer": answer, "steps_completed": steps}
 
 
-def citations_node(state: QAState) -> dict:
-    """Keep only the reranked sources actually cited by the answer."""
-    reranked = state.get("reranked", [])
-    answer = state.get("answer", "")
+def is_off_topic_answer(answer: str) -> bool:
+    """Return True when the answer is a canned or deflecting off-topic reply."""
+    normalized = answer.strip()
+    if not normalized:
+        return True
+
+    if normalized in _FALLBACK_MESSAGES.values():
+        return True
+
+    lowered = normalized.lower()
+    return any(marker in lowered for marker in _OFF_TOPIC_MARKERS)
+
+
+def extract_cited_sources(answer: str, reranked: list[dict]) -> list[Source]:
+    """Keep only reranked sources explicitly cited in the answer."""
+    if is_off_topic_answer(answer):
+        return []
 
     cited_indices: list[int] = []
     for match in _CITATION_RE.findall(answer):
@@ -98,10 +125,17 @@ def citations_node(state: QAState) -> dict:
         if 1 <= index <= len(reranked) and index not in cited_indices:
             cited_indices.append(index)
 
-    if cited_indices:
-        sources = [_to_source(reranked[index - 1]) for index in cited_indices]
-    else:
-        sources = [_to_source(hit) for hit in reranked]
+    if not cited_indices:
+        return []
+
+    return [_to_source(reranked[index - 1]) for index in cited_indices]
+
+
+def citations_node(state: QAState) -> dict:
+    """Keep only the reranked sources actually cited by the answer."""
+    reranked = state.get("reranked", [])
+    answer = state.get("answer", "")
+    sources = extract_cited_sources(answer, reranked)
 
     steps = list(state.get("steps_completed", []))
     steps.append("citations")
