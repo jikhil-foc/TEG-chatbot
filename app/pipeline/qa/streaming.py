@@ -6,24 +6,50 @@ import logging
 from collections.abc import Iterator
 from typing import Any
 
-from app.pipeline.crawl.text import detect_query_language
+from app.core.langsmith import build_run_config, configure_langsmith
 from app.pipeline.embedding.config import EmbeddingSettings, get_embedding_settings
 from app.pipeline.embedding.retriever import HybridRetriever
-from app.pipeline.llm.answerer import generate_answer_stream
-from app.pipeline.llm.reranker import rerank
-from app.pipeline.qa.nodes import extract_cited_sources, fallback_node
+from app.pipeline.qa.conversation import ConversationMessage
+from app.pipeline.qa.graph import build_qa_initial_state, get_qa_graph
+from app.pipeline.qa.state import QAState
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_LANGUAGE = "English"
+_TERMINAL_NODES = frozenset({"clarify", "fallback"})
+_STATUS_STEP_ALIASES = {"generate_answer": "generate"}
 
 
-def _relevance_passes(reranked: list[dict], settings: EmbeddingSettings) -> bool:
-    if not reranked:
-        return False
-    threshold = settings.rerank_relevance_threshold
-    top_score = max(hit.get("rerank_score", 0.0) for hit in reranked)
-    return top_score >= threshold
+def _status_step(node_name: str) -> str:
+    return _STATUS_STEP_ALIASES.get(node_name, node_name)
+
+
+def _serialize_sources(sources: list[Any]) -> list[dict[str, Any]]:
+    serialized: list[dict[str, Any]] = []
+    for source in sources:
+        if hasattr(source, "model_dump"):
+            serialized.append(source.model_dump())
+        elif isinstance(source, dict):
+            serialized.append(source)
+    return serialized
+
+
+def _done_event(query: str, state: QAState) -> dict[str, Any]:
+    return {
+        "type": "done",
+        "query": query,
+        "answer": state.get("answer", ""),
+        "language": state.get("language"),
+        "sources": _serialize_sources(state.get("sources", [])),
+        "clarification": bool(state.get("needs_clarification")),
+        "off_topic": bool(state.get("off_topic")),
+    }
+
+
+def _yield_answer_tokens(answer: str) -> Iterator[dict[str, Any]]:
+    """Emit the final answer as SSE token events."""
+    if not answer:
+        return
+    yield {"type": "token", "content": answer}
 
 
 def stream_qa_pipeline(
@@ -32,56 +58,44 @@ def stream_qa_pipeline(
     rerank_top_n: int,
     retriever: HybridRetriever,
     settings: EmbeddingSettings | None = None,
+    messages: list[ConversationMessage] | None = None,
+    session_id: str | None = None,
 ) -> Iterator[dict[str, Any]]:
-    """Yield SSE-friendly events through the QA pipeline with streamed generation."""
+    """Yield SSE-friendly events by streaming the LangGraph QA workflow."""
     settings = settings or get_embedding_settings()
+    configure_langsmith()
 
-    yield {"type": "status", "step": "detect_language"}
-    language = detect_query_language(query) or _DEFAULT_LANGUAGE
-
-    yield {"type": "status", "step": "retrieve"}
-    hits = retriever.search(query, top_k=top_k)
-
-    yield {"type": "status", "step": "rerank"}
-    reranked = rerank(
+    initial_state = build_qa_initial_state(
         query,
-        hits,
-        top_n=rerank_top_n,
+        top_k=top_k,
+        rerank_top_n=rerank_top_n,
+        retriever=retriever,
         settings=settings,
+        messages=messages,
+        session_id=session_id,
+    )
+    config = build_run_config(
+        run_name="qa_pipeline_stream",
+        tags=["qa", "ask", "stream"],
+        metadata={"query": query[:500]},
     )
 
-    if not _relevance_passes(reranked, settings):
-        fallback = fallback_node({"language": language, "steps_completed": []})
-        answer = fallback["answer"]
-        logger.info("Streaming fallback answer for low-relevance query: %r", query)
-        yield {"type": "token", "content": answer}
-        yield {
-            "type": "done",
-            "query": query,
-            "answer": answer,
-            "language": language,
-            "sources": [],
-        }
-        return
+    graph = get_qa_graph()
+    accumulated: QAState = dict(initial_state)
 
-    yield {"type": "status", "step": "generate"}
-    answer_parts: list[str] = []
-    for token in generate_answer_stream(
-        query,
-        reranked,
-        settings=settings,
-        language=language,
-    ):
-        answer_parts.append(token)
-        yield {"type": "token", "content": token}
+    logger.info("Streaming QA graph (top_k=%d, rerank_top_n=%d): %r", top_k, rerank_top_n, query)
 
-    answer = "".join(answer_parts).strip()
-    sources = extract_cited_sources(answer, reranked)
+    for chunk in graph.stream(initial_state, config=config, stream_mode="updates"):
+        for node_name, update in chunk.items():
+            accumulated.update(update)
+            yield {"type": "status", "step": _status_step(node_name)}
 
-    yield {
-        "type": "done",
-        "query": query,
-        "answer": answer,
-        "language": language,
-        "sources": [source.model_dump() for source in sources],
-    }
+            if node_name in _TERMINAL_NODES:
+                answer = accumulated.get("answer", "")
+                yield from _yield_answer_tokens(answer)
+                yield _done_event(query, accumulated)
+                return
+
+    answer = accumulated.get("answer", "")
+    yield from _yield_answer_tokens(answer)
+    yield _done_event(query, accumulated)

@@ -116,6 +116,8 @@ export async function askQuestionStream(
           language:
             typeof event.language === "string" ? event.language : null,
           sources: Array.isArray(event.sources) ? event.sources : [],
+          clarification: event.clarification === true,
+          off_topic: event.off_topic === true,
         });
         break;
       case "error":

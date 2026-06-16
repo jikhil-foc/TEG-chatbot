@@ -6,8 +6,15 @@ export interface Source {
   rerank_score: number;
 }
 
+export interface ConversationMessage {
+  role: MessageRole;
+  content: string;
+}
+
 export interface AskRequest {
   query: string;
+  messages?: ConversationMessage[];
+  session_id?: string;
   top_k?: number;
   rerank_top_n?: number;
 }
@@ -17,6 +24,8 @@ export interface AskResponse {
   answer: string;
   language: string | null;
   sources: Source[];
+  clarification?: boolean;
+  off_topic?: boolean;
 }
 
 export type MessageRole = "user" | "assistant";
@@ -26,6 +35,7 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   sources?: Source[];
+  language?: string | null;
   error?: boolean;
   streaming?: boolean;
 }

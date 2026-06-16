@@ -2,8 +2,9 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { askQuestionStream, ChatApiError } from "@/api/chat";
 import { ChatInput } from "@/components/ChatInput";
 import { MessageList } from "@/components/MessageList";
-import type { ChatMessage, ChatWidgetConfig } from "@/types";
+import type { ChatMessage, ChatWidgetConfig, ConversationMessage } from "@/types";
 import { createMessageId } from "@/utils/id";
+import { getOrCreateSessionId } from "@/utils/session";
 import "@/styles/widget.css";
 
 const DEFAULT_CONFIG: Required<ChatWidgetConfig> = {
@@ -30,6 +31,7 @@ export function ChatWidget({
 }: ChatWidgetProps) {
   const panelId = useId();
   const abortRef = useRef<AbortController | null>(null);
+  const sessionIdRef = useRef(getOrCreateSessionId());
 
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -65,6 +67,17 @@ export function ChatWidget({
       return;
     }
 
+    const priorMessages: ConversationMessage[] = messages
+      .filter(
+        (message) =>
+          !message.streaming && !message.error && message.content.trim().length > 0,
+      )
+      .slice(-10)
+      .map((message) => ({
+        role: message.role,
+        content: message.content,
+      }));
+
     const userMessage: ChatMessage = {
       id: createMessageId(),
       role: "user",
@@ -93,7 +106,11 @@ export function ChatWidget({
     try {
       await askQuestionStream(
         resolvedApiUrl,
-        { query },
+        {
+          query,
+          messages: priorMessages,
+          session_id: sessionIdRef.current,
+        },
         {
           onToken: (content) => {
             setMessages((prev) =>
@@ -112,6 +129,7 @@ export function ChatWidget({
                       ...message,
                       content: response.answer,
                       sources: response.sources,
+                      language: response.language,
                       streaming: false,
                     }
                   : message,
@@ -161,7 +179,7 @@ export function ChatWidget({
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, resolvedApiUrl]);
+  }, [input, isLoading, messages, resolvedApiUrl]);
 
   return (
     <div

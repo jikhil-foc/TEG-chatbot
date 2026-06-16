@@ -7,6 +7,7 @@ from typing import Any, TypedDict
 from app.pipeline.embedding.config import EmbeddingSettings
 from app.pipeline.embedding.retriever import HybridRetriever
 from app.pipeline.llm.models import Source
+from app.pipeline.qa.conversation import ConversationMessage
 
 
 class QAState(TypedDict, total=False):
@@ -14,6 +15,9 @@ class QAState(TypedDict, total=False):
 
     # Request parameters and shared dependencies.
     query: str
+    effective_query: str
+    messages: list[ConversationMessage]
+    session_id: str | None
     top_k: int
     rerank_top_n: int
     retriever: HybridRetriever
@@ -33,6 +37,9 @@ class QAState(TypedDict, total=False):
 
     # Control flow.
     fallback: bool
+    off_topic: bool
+    needs_clarification: bool
+    clarification_question: str | None
     validation_passed: bool
     retry_count: int
 

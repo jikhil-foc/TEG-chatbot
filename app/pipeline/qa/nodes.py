@@ -7,6 +7,7 @@ import re
 from app.pipeline.llm.answerer import generate_answer
 from app.pipeline.llm.models import Source
 from app.pipeline.llm.reranker import rerank
+from app.pipeline.qa.query_analyzer import analyze_conversation
 from app.pipeline.qa.state import QAState
 from app.pipeline.qa.validator import validate_answer
 from app.pipeline.crawl.text import detect_query_language
@@ -45,6 +46,10 @@ def _to_source(hit: dict) -> Source:
     )
 
 
+def _search_query(state: QAState) -> str:
+    return state.get("effective_query") or state["query"]
+
+
 def detect_language_node(state: QAState) -> dict:
     """Detect the query language so the answer can reply in kind."""
     language = detect_query_language(state["query"]) or _DEFAULT_LANGUAGE
@@ -53,9 +58,61 @@ def detect_language_node(state: QAState) -> dict:
     return {"language": language, "steps_completed": steps}
 
 
+def analyze_query_node(state: QAState) -> dict:
+    """Decide whether to clarify or rewrite the query for retrieval."""
+    analysis = analyze_conversation(
+        state["query"],
+        messages=state.get("messages") or [],
+        session_id=state.get("session_id"),
+        settings=state["settings"],
+    )
+    steps = list(state.get("steps_completed", []))
+    steps.append("analyze_query")
+
+    if analysis.status == "off_topic":
+        return {
+            "off_topic": True,
+            "needs_clarification": False,
+            "clarification_question": None,
+            "steps_completed": steps,
+        }
+
+    if analysis.status == "needs_clarification":
+        return {
+            "off_topic": False,
+            "needs_clarification": True,
+            "clarification_question": analysis.clarification_question,
+            "steps_completed": steps,
+        }
+
+    return {
+        "off_topic": False,
+        "needs_clarification": False,
+        "effective_query": analysis.effective_query,
+        "clarification_question": None,
+        "steps_completed": steps,
+    }
+
+
+def clarify_node(state: QAState) -> dict:
+    """Ask the user for missing details before retrieval."""
+    question = state.get("clarification_question") or (
+        "Could you provide a bit more detail so I can find the right information?"
+    )
+    steps = list(state.get("steps_completed", []))
+    steps.append("clarify")
+    return {
+        "answer": question,
+        "sources": [],
+        "needs_clarification": True,
+        "steps_completed": steps,
+    }
+
+
 def retrieve_node(state: QAState) -> dict:
     """Run hybrid dense + BM25 retrieval for the query."""
-    hits = state["retriever"].search(state["query"], top_k=state["top_k"])
+    search_query = _search_query(state)
+    hits = state["retriever"].search(search_query, top_k=state["top_k"])
     steps = list(state.get("steps_completed", []))
     steps.append("retrieve")
     return {"hits": hits, "steps_completed": steps}
@@ -63,8 +120,9 @@ def retrieve_node(state: QAState) -> dict:
 
 def rerank_node(state: QAState) -> dict:
     """Rescore retrieved hits with the Cohere rerank API."""
+    search_query = _search_query(state)
     reranked = rerank(
-        state["query"],
+        search_query,
         state.get("hits", []),
         top_n=state["rerank_top_n"],
         settings=state["settings"],
@@ -91,7 +149,7 @@ def fallback_node(state: QAState) -> dict:
 def generate_answer_node(state: QAState) -> dict:
     """Generate a grounded, cited answer from the reranked context."""
     answer = generate_answer(
-        state["query"],
+        _search_query(state),
         state.get("reranked", []),
         settings=state["settings"],
         language=state.get("language"),
@@ -145,7 +203,7 @@ def citations_node(state: QAState) -> dict:
 def validation_node(state: QAState) -> dict:
     """Validate answer groundedness/citations and track retry attempts."""
     passed = validate_answer(
-        state["query"],
+        _search_query(state),
         state.get("answer", ""),
         state.get("reranked", []),
         settings=state["settings"],

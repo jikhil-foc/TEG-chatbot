@@ -5,10 +5,18 @@ from collections.abc import Iterator
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from app.pipeline.qa.conversation import ConversationMessage
 from app.schemas.ask import AskRequest
 from app.services import ask_service
 
 router = APIRouter()
+
+
+def _to_conversation_messages(request: AskRequest) -> list[ConversationMessage]:
+    return [
+        ConversationMessage(role=message.role, content=message.content)
+        for message in request.messages
+    ]
 
 
 def _format_sse(event: dict) -> str:
@@ -33,6 +41,8 @@ async def ask(request: AskRequest) -> StreamingResponse:
                 request.query,
                 request.top_k,
                 request.rerank_top_n,
+                messages=_to_conversation_messages(request),
+                session_id=request.session_id,
             ):
                 yield _format_sse(event)
         except Exception as exc:

@@ -10,6 +10,7 @@ from __future__ import annotations
 from app.pipeline.embedding.config import EmbeddingSettings
 from app.pipeline.embedding.retriever import HybridRetriever
 from app.pipeline.llm.models import AnswerResult
+from app.pipeline.qa.conversation import ConversationMessage
 
 
 def answer_question(
@@ -18,6 +19,8 @@ def answer_question(
     rerank_top_n: int = 5,
     retriever: HybridRetriever | None = None,
     settings: EmbeddingSettings | None = None,
+    messages: list[ConversationMessage] | None = None,
+    session_id: str | None = None,
 ) -> AnswerResult:
     """Answer ``query`` end-to-end over the indexed corpus.
 
@@ -36,4 +39,6 @@ def answer_question(
         rerank_top_n=rerank_top_n,
         retriever=retriever,
         settings=settings,
+        messages=messages,
+        session_id=session_id,
     )

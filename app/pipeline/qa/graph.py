@@ -16,8 +16,11 @@ from app.core.langsmith import build_run_config, configure_langsmith
 from app.pipeline.embedding.config import EmbeddingSettings, get_embedding_settings
 from app.pipeline.embedding.retriever import HybridRetriever
 from app.pipeline.llm.models import AnswerResult
+from app.pipeline.qa.conversation import ConversationMessage
 from app.pipeline.qa.nodes import (
+    analyze_query_node,
     citations_node,
+    clarify_node,
     detect_language_node,
     fallback_node,
     generate_answer_node,
@@ -30,6 +33,15 @@ from app.pipeline.qa.state import QAState
 logger = logging.getLogger(__name__)
 
 _compiled_graph = None
+
+
+def _route_after_analyze(state: QAState) -> str:
+    """Reject off-topic queries, clarify, or continue to retrieval."""
+    if state.get("off_topic"):
+        return "fallback"
+    if state.get("needs_clarification"):
+        return "clarify"
+    return "retrieve"
 
 
 def _relevance_gate(state: QAState) -> str:
@@ -56,6 +68,8 @@ def build_qa_graph():
     """Build and compile the QA workflow graph."""
     workflow = StateGraph(QAState)
     workflow.add_node("detect_language", detect_language_node)
+    workflow.add_node("analyze_query", analyze_query_node)
+    workflow.add_node("clarify", clarify_node)
     workflow.add_node("retrieve", retrieve_node)
     workflow.add_node("rerank", rerank_node)
     workflow.add_node("fallback", fallback_node)
@@ -64,7 +78,13 @@ def build_qa_graph():
     workflow.add_node("validation", validation_node)
 
     workflow.add_edge(START, "detect_language")
-    workflow.add_edge("detect_language", "retrieve")
+    workflow.add_edge("detect_language", "analyze_query")
+    workflow.add_conditional_edges(
+        "analyze_query",
+        _route_after_analyze,
+        {"fallback": "fallback", "clarify": "clarify", "retrieve": "retrieve"},
+    )
+    workflow.add_edge("clarify", END)
     workflow.add_edge("retrieve", "rerank")
     workflow.add_conditional_edges(
         "rerank",
@@ -90,12 +110,44 @@ def _get_graph():
     return _compiled_graph
 
 
+def get_qa_graph():
+    """Return the compiled QA LangGraph workflow."""
+    return _get_graph()
+
+
+def build_qa_initial_state(
+    query: str,
+    *,
+    top_k: int,
+    rerank_top_n: int,
+    retriever: HybridRetriever,
+    settings: EmbeddingSettings,
+    messages: list[ConversationMessage] | None = None,
+    session_id: str | None = None,
+) -> QAState:
+    """Build the initial state dict for QA graph invoke/stream."""
+    return {
+        "query": query,
+        "messages": messages or [],
+        "session_id": session_id,
+        "top_k": top_k,
+        "rerank_top_n": rerank_top_n,
+        "retriever": retriever,
+        "settings": settings,
+        "max_retries": settings.qa_max_validation_retries,
+        "retry_count": 0,
+        "steps_completed": [],
+    }
+
+
 def run_qa_pipeline(
     query: str,
     top_k: int = 10,
     rerank_top_n: int = 5,
     retriever: HybridRetriever | None = None,
     settings: EmbeddingSettings | None = None,
+    messages: list[ConversationMessage] | None = None,
+    session_id: str | None = None,
 ) -> AnswerResult:
     """Answer ``query`` end-to-end through the QA LangGraph workflow."""
     settings = settings or get_embedding_settings()
@@ -110,16 +162,15 @@ def run_qa_pipeline(
 
     configure_langsmith()
 
-    initial_state: QAState = {
-        "query": query,
-        "top_k": top_k,
-        "rerank_top_n": rerank_top_n,
-        "retriever": retriever,
-        "settings": settings,
-        "max_retries": settings.qa_max_validation_retries,
-        "retry_count": 0,
-        "steps_completed": [],
-    }
+    initial_state = build_qa_initial_state(
+        query,
+        top_k=top_k,
+        rerank_top_n=rerank_top_n,
+        retriever=retriever,
+        settings=settings,
+        messages=messages,
+        session_id=session_id,
+    )
 
     final_state = _get_graph().invoke(
         initial_state,

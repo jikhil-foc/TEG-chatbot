@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@/types";
+import { formatResponseLanguageCode } from "@/utils/language";
 import { MessageMarkdown } from "./MessageMarkdown";
 import { SourceLinks } from "./SourceLinks";
 import { TypingIndicator } from "./TypingIndicator";
@@ -10,6 +11,9 @@ interface MessageBubbleProps {
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isAwaitingFirstToken = message.streaming && message.content.length === 0;
+  const languageCode = formatResponseLanguageCode(message.language);
+  const showLanguage =
+    !isUser && !message.streaming && !message.error && languageCode !== null;
 
   return (
     <article
@@ -35,6 +39,17 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             message.sources.length > 0 && (
               <SourceLinks sources={message.sources} />
             )}
+          {showLanguage && (
+            <footer className="teg-message__meta">
+              <span
+                className="teg-message__lang"
+                aria-label={`Response language: ${message.language}`}
+                title={`Response language: ${message.language}`}
+              >
+                {languageCode}
+              </span>
+            </footer>
+          )}
         </div>
       )}
     </article>
