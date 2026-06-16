@@ -118,6 +118,11 @@ export async function askQuestionStream(
           sources: Array.isArray(event.sources) ? event.sources : [],
           clarification: event.clarification === true,
           off_topic: event.off_topic === true,
+          related_questions: Array.isArray(event.related_questions)
+            ? event.related_questions.filter(
+                (item): item is string => typeof item === "string",
+              )
+            : [],
         });
         break;
       case "error":

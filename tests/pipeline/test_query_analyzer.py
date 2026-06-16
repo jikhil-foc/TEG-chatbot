@@ -78,3 +78,47 @@ def test_teg_related_query_is_not_off_topic() -> None:
 
     assert result.status == "complete"
     assert result.effective_query == "What services does TEG provide?"
+
+
+def test_hi_is_greeting() -> None:
+    result = analyze_conversation("Hi")
+
+    assert result.status == "greeting"
+    assert result.greeting_kind == "hello"
+
+
+def test_hello_there_is_greeting() -> None:
+    result = analyze_conversation("Hello there")
+
+    assert result.status == "greeting"
+    assert result.greeting_kind == "hello"
+
+
+def test_thanks_is_greeting() -> None:
+    result = analyze_conversation("Thank you")
+
+    assert result.status == "greeting"
+    assert result.greeting_kind == "thanks"
+
+
+def test_bye_is_greeting() -> None:
+    result = analyze_conversation("Bye")
+
+    assert result.status == "greeting"
+    assert result.greeting_kind == "farewell"
+
+
+def test_greeting_clears_pending_clarification() -> None:
+    analyze_conversation("Exam fees", session_id="session-greet")
+    assert get_pending("session-greet") is not None
+
+    result = analyze_conversation("Hi", session_id="session-greet")
+
+    assert result.status == "greeting"
+    assert get_pending("session-greet") is None
+
+
+def test_hi_with_question_is_not_greeting() -> None:
+    result = analyze_conversation("Hi, what are TEG exam fees for adults?")
+
+    assert result.status != "greeting"

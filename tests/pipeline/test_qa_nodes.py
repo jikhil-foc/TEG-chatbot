@@ -1,6 +1,26 @@
 """Tests for QA citation and off-topic handling."""
 
-from app.pipeline.qa.nodes import extract_cited_sources, is_off_topic_answer
+from app.pipeline.qa.nodes import (
+    extract_cited_sources,
+    greeting_node,
+    is_off_topic_answer,
+)
+
+
+def test_greeting_node_returns_welcome_message() -> None:
+    result = greeting_node(
+        {
+            "query": "Hi",
+            "language": "English",
+            "greeting_kind": "hello",
+            "steps_completed": [],
+        }
+    )
+
+    assert "TEG" in result["answer"]
+    assert result["sources"] == []
+    assert result["greeting"] is True
+    assert result["off_topic"] is False
 
 
 def test_is_off_topic_answer_detects_fallback_messages() -> None:

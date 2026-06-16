@@ -26,6 +26,7 @@ export interface AskResponse {
   sources: Source[];
   clarification?: boolean;
   off_topic?: boolean;
+  related_questions?: string[];
 }
 
 export type MessageRole = "user" | "assistant";
@@ -36,6 +37,7 @@ export interface ChatMessage {
   content: string;
   sources?: Source[];
   language?: string | null;
+  relatedQuestions?: string[];
   error?: boolean;
   streaming?: boolean;
 }

@@ -29,6 +29,10 @@ class EmbeddingSettings(BaseSettings):
     # OpenAI dense embeddings.
     openai_api_key: str = Field(default="", description="OpenAI API key")
     openai_embedding_model: str = "text-embedding-3-large"
+    openai_chat_model: str = Field(
+        default="gpt-4o-mini",
+        description="OpenAI chat model for QA, validation, and suggestions",
+    )
 
     # Cohere reranking.
     cohere_api_key: str = Field(default="", description="Cohere API key")

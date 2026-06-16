@@ -12,10 +12,11 @@ from app.pipeline.embedding.retriever import HybridRetriever
 from app.pipeline.qa.conversation import ConversationMessage
 from app.pipeline.qa.graph import build_qa_initial_state, get_qa_graph
 from app.pipeline.qa.state import QAState
+from app.pipeline.qa.suggestions import generate_related_questions
 
 logger = logging.getLogger(__name__)
 
-_TERMINAL_NODES = frozenset({"clarify", "fallback"})
+_TERMINAL_NODES = frozenset({"clarify", "fallback", "greeting"})
 _STATUS_STEP_ALIASES = {"generate_answer": "generate"}
 
 
@@ -33,6 +34,27 @@ def _serialize_sources(sources: list[Any]) -> list[dict[str, Any]]:
     return serialized
 
 
+def _should_generate_related_questions(state: QAState) -> bool:
+    if state.get("needs_clarification"):
+        return False
+    if state.get("off_topic") or state.get("fallback"):
+        return False
+    return bool(state.get("answer", "").strip())
+
+
+def _maybe_related_questions(state: QAState) -> list[str]:
+    if not _should_generate_related_questions(state):
+        return []
+
+    search_query = state.get("effective_query") or state.get("query", "")
+    return generate_related_questions(
+        search_query,
+        state.get("answer", ""),
+        language=state.get("language"),
+        settings=state.get("settings"),
+    )
+
+
 def _done_event(query: str, state: QAState) -> dict[str, Any]:
     return {
         "type": "done",
@@ -42,6 +64,7 @@ def _done_event(query: str, state: QAState) -> dict[str, Any]:
         "sources": _serialize_sources(state.get("sources", [])),
         "clarification": bool(state.get("needs_clarification")),
         "off_topic": bool(state.get("off_topic")),
+        "related_questions": _maybe_related_questions(state),
     }
 
 

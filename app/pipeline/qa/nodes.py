@@ -21,6 +21,31 @@ _FALLBACK_MESSAGES = {
     "Irish": "Cuir ceist a bhaineann le TEG, le do thoil. Tá mé anseo chun cabhrú le hábhar láithreán TEG.",
 }
 
+_GREETING_MESSAGES = {
+    "hello": {
+        "English": (
+            "Hello! I can help answer questions about TEG based on our published "
+            "content. What would you like to know?"
+        ),
+        "Irish": (
+            "Dia dhuit! Is féidir liom cabhrú le ceisteanna faoi TEG bunaithe ar "
+            "ár n-ábhar foilsithe. Cad ba mhaith leat a fháil amach?"
+        ),
+    },
+    "thanks": {
+        "English": "You're welcome! Let me know if you have any other TEG questions.",
+        "Irish": "Tá fáilte romhat! Cuir ceist eile faoi TEG orm más gá.",
+    },
+    "farewell": {
+        "English": (
+            "Goodbye! Feel free to come back if you have more questions about TEG."
+        ),
+        "Irish": (
+            "Slán! Tar ar ais má bhíonn tuilleadh ceisteanna agat faoi TEG."
+        ),
+    },
+}
+
 # Matches inline citation markers such as ``[1]`` or ``[12]`` in an answer.
 _CITATION_RE = re.compile(r"\[(\d+)\]")
 
@@ -69,6 +94,16 @@ def analyze_query_node(state: QAState) -> dict:
     steps = list(state.get("steps_completed", []))
     steps.append("analyze_query")
 
+    if analysis.status == "greeting":
+        return {
+            "greeting": True,
+            "greeting_kind": analysis.greeting_kind or "hello",
+            "off_topic": False,
+            "needs_clarification": False,
+            "clarification_question": None,
+            "steps_completed": steps,
+        }
+
     if analysis.status == "off_topic":
         return {
             "off_topic": True,
@@ -87,9 +122,28 @@ def analyze_query_node(state: QAState) -> dict:
 
     return {
         "off_topic": False,
+        "greeting": False,
         "needs_clarification": False,
         "effective_query": analysis.effective_query,
         "clarification_question": None,
+        "steps_completed": steps,
+    }
+
+
+def greeting_node(state: QAState) -> dict:
+    """Return a warm canned reply for greetings, thanks, and goodbyes."""
+    language = state.get("language", _DEFAULT_LANGUAGE)
+    kind = state.get("greeting_kind") or "hello"
+    messages = _GREETING_MESSAGES.get(kind, _GREETING_MESSAGES["hello"])
+    message = messages.get(language, messages[_DEFAULT_LANGUAGE])
+    steps = list(state.get("steps_completed", []))
+    steps.append("greeting")
+    return {
+        "answer": message,
+        "sources": [],
+        "greeting": True,
+        "off_topic": False,
+        "needs_clarification": False,
         "steps_completed": steps,
     }
 

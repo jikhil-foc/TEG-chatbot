@@ -24,6 +24,7 @@ from app.pipeline.qa.nodes import (
     detect_language_node,
     fallback_node,
     generate_answer_node,
+    greeting_node,
     rerank_node,
     retrieve_node,
     validation_node,
@@ -36,7 +37,9 @@ _compiled_graph = None
 
 
 def _route_after_analyze(state: QAState) -> str:
-    """Reject off-topic queries, clarify, or continue to retrieval."""
+    """Handle greetings, reject off-topic queries, clarify, or continue."""
+    if state.get("greeting"):
+        return "greeting"
     if state.get("off_topic"):
         return "fallback"
     if state.get("needs_clarification"):
@@ -70,6 +73,7 @@ def build_qa_graph():
     workflow.add_node("detect_language", detect_language_node)
     workflow.add_node("analyze_query", analyze_query_node)
     workflow.add_node("clarify", clarify_node)
+    workflow.add_node("greeting", greeting_node)
     workflow.add_node("retrieve", retrieve_node)
     workflow.add_node("rerank", rerank_node)
     workflow.add_node("fallback", fallback_node)
@@ -82,8 +86,9 @@ def build_qa_graph():
     workflow.add_conditional_edges(
         "analyze_query",
         _route_after_analyze,
-        {"fallback": "fallback", "clarify": "clarify", "retrieve": "retrieve"},
+        {"greeting": "greeting", "fallback": "fallback", "clarify": "clarify", "retrieve": "retrieve"},
     )
+    workflow.add_edge("greeting", END)
     workflow.add_edge("clarify", END)
     workflow.add_edge("retrieve", "rerank")
     workflow.add_conditional_edges(

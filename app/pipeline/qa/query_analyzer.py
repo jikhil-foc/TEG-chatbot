@@ -60,6 +60,25 @@ _OFF_TOPIC_PATTERN_RE = re.compile(
     r"\b(recipe|cook|bake)\s+",
     re.IGNORECASE,
 )
+_GREETING_HELLO_RE = re.compile(
+    r"^(?:"
+    r"hi|hello|hey|hiya|howdy|"
+    r"good\s+(?:morning|afternoon|evening)|"
+    r"dia\s+dh?uit"
+    r")(?:\s+there|\s+again)?$",
+    re.IGNORECASE,
+)
+_GREETING_THANKS_RE = re.compile(
+    r"^(?:thanks?|thank\s+you|thx|go\s+raibh\s+maith\s+agat)(?:\s+so\s+much)?$",
+    re.IGNORECASE,
+)
+_GREETING_FAREWELL_RE = re.compile(
+    r"^(?:"
+    r"(?:good)?bye|goodbye|good\s+bye|see\s+ya|see\s+you|"
+    r"slán|slán\s+go\s+fóill"
+    r")(?:\s+now|\s+soon)?$",
+    re.IGNORECASE,
+)
 
 _DEFAULT_CLARIFICATION = (
     "For which exam or candidate group are you asking about fees? "
@@ -72,13 +91,15 @@ _ANALYZE_SYSTEM_PROMPT = (
     "exam fees, registration, syllabi, candidate groups, and TEG services. "
     "Given the conversation history and the latest user message, classify the "
     "question as one of:\n"
+    "- greeting: a simple greeting, thanks, or goodbye with no substantive "
+    "question (e.g. hi, hello, thanks, bye)\n"
     "- off_topic: unrelated to TEG (e.g. other companies, sports, weather, "
-    "general knowledge)\n"
+    "general knowledge). Do NOT mark greetings as off_topic.\n"
     "- needs_clarification: on-topic but missing key details (e.g. which exam "
     "or candidate group for fees)\n"
     "- complete: on-topic and specific enough to search the knowledge base\n"
     "Reply with JSON only, no markdown:\n"
-    '{"status":"complete"|"needs_clarification"|"off_topic",'
+    '{"status":"complete"|"needs_clarification"|"off_topic"|"greeting",'
     '"standalone_query":"self-contained search query when complete",'
     '"clarification_question":"question to ask when needs_clarification",'
     '"intent":"short topic label",'
@@ -90,11 +111,12 @@ _ANALYZE_SYSTEM_PROMPT = (
 class QueryAnalysisResult:
     """Outcome of conversational query analysis."""
 
-    status: Literal["complete", "needs_clarification", "off_topic"]
+    status: Literal["complete", "needs_clarification", "off_topic", "greeting"]
     effective_query: str
     clarification_question: str | None = None
     intent: str = ""
     missing_slots: tuple[str, ...] = ()
+    greeting_kind: Literal["hello", "thanks", "farewell"] | None = None
 
 
 def _format_history(messages: list[ConversationMessage]) -> str:
@@ -116,6 +138,36 @@ def _looks_like_new_question(text: str) -> bool:
 
 def _mentions_teg_topic(query: str) -> bool:
     return bool(_TEG_TOPIC_RE.search(query))
+
+
+def _normalize_greeting_text(query: str) -> str:
+    """Strip punctuation so short social phrases can be matched reliably."""
+    return re.sub(r"[^\w\s']", "", query.strip())
+
+
+def _greeting_kind(query: str) -> Literal["hello", "thanks", "farewell"] | None:
+    """Return greeting kind when the message is only a short social phrase."""
+    normalized = _normalize_greeting_text(query)
+    if not normalized or len(normalized.split()) > 4:
+        return None
+    if _GREETING_HELLO_RE.match(normalized):
+        return "hello"
+    if _GREETING_THANKS_RE.match(normalized):
+        return "thanks"
+    if _GREETING_FAREWELL_RE.match(normalized):
+        return "farewell"
+    return None
+
+
+def _heuristic_greeting(query: str) -> QueryAnalysisResult | None:
+    kind = _greeting_kind(query)
+    if kind is None:
+        return None
+    return QueryAnalysisResult(
+        status="greeting",
+        effective_query=query,
+        greeting_kind=kind,
+    )
 
 
 def _is_likely_off_topic_query(query: str) -> bool:
@@ -176,12 +228,19 @@ def _parse_llm_analysis(raw: str, fallback_query: str) -> QueryAnalysisResult:
         return QueryAnalysisResult(status="complete", effective_query=fallback_query)
 
     status = payload.get("status", "complete")
-    if status not in {"complete", "needs_clarification", "off_topic"}:
+    if status not in {"complete", "needs_clarification", "off_topic", "greeting"}:
         status = "complete"
 
     standalone = str(payload.get("standalone_query") or fallback_query).strip()
     if not standalone:
         standalone = fallback_query
+
+    if status == "greeting":
+        return QueryAnalysisResult(
+            status="greeting",
+            effective_query=fallback_query,
+            greeting_kind=_greeting_kind(fallback_query) or "hello",
+        )
 
     if status == "off_topic":
         return QueryAnalysisResult(status="off_topic", effective_query=fallback_query)
@@ -258,6 +317,12 @@ def analyze_conversation(
     settings = settings or get_embedding_settings()
     messages = messages or []
     stripped = query.strip()
+
+    greeting = _heuristic_greeting(stripped)
+    if greeting is not None:
+        clear_pending(session_id)
+        logger.info("Greeting query: %r (%s)", stripped, greeting.greeting_kind)
+        return greeting
 
     pending = get_pending(session_id)
     if pending:

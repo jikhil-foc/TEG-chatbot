@@ -1,4 +1,4 @@
-"""Chat completion model backed by OpenAI ``gpt-4o-mini``.
+"""Chat completion model backed by OpenAI.
 
 Wraps :class:`langchain_openai.ChatOpenAI` with explicit configuration and
 built-in retry on transient API failures, mirroring
@@ -15,12 +15,10 @@ from app.pipeline.embedding.config import EmbeddingSettings
 
 logger = logging.getLogger(__name__)
 
-CHAT_MODEL = "gpt-4o-mini"
-
 
 def build_chat_model(
     settings: EmbeddingSettings,
-    model: str = CHAT_MODEL,
+    model: str | None = None,
 ) -> ChatOpenAI:
     """Construct a ``ChatOpenAI`` client from ``settings``.
 
@@ -32,9 +30,10 @@ def build_chat_model(
             "OPENAI_API_KEY is not set. Add it to your environment or .env file."
         )
 
-    logger.info("Initialising chat model: model=%s", model)
+    resolved_model = model or settings.openai_chat_model
+    logger.info("Initialising chat model: model=%s", resolved_model)
     return ChatOpenAI(
-        model=model,
+        model=resolved_model,
         api_key=settings.openai_api_key,
         temperature=0,
         max_retries=settings.max_retries,

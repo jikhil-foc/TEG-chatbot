@@ -4,9 +4,17 @@ import { MessageBubble } from "./MessageBubble";
 
 interface MessageListProps {
   messages: ChatMessage[];
+  latestAssistantMessageId?: string | null;
+  suggestionsDisabled?: boolean;
+  onSuggestedQuestion?: (question: string) => void;
 }
 
-export function MessageList({ messages }: MessageListProps) {
+export function MessageList({
+  messages,
+  latestAssistantMessageId = null,
+  suggestionsDisabled = false,
+  onSuggestedQuestion,
+}: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,7 +30,13 @@ export function MessageList({ messages }: MessageListProps) {
       aria-label="Chat messages"
     >
       {messages.map((message) => (
-        <MessageBubble key={message.id} message={message} />
+        <MessageBubble
+          key={message.id}
+          message={message}
+          showSuggestions={message.id === latestAssistantMessageId}
+          suggestionsDisabled={suggestionsDisabled}
+          onSuggestedQuestion={onSuggestedQuestion}
+        />
       ))}
       <div ref={bottomRef} />
     </div>

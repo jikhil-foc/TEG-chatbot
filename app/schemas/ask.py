@@ -60,6 +60,7 @@ class AskStreamDoneEvent(BaseModel):
     sources: list[Source] = Field(default_factory=list)
     clarification: bool = False
     off_topic: bool = False
+    related_questions: list[str] = Field(default_factory=list, max_length=3)
 
 
 class AskStreamErrorEvent(BaseModel):

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { askQuestionStream, ChatApiError } from "@/api/chat";
 import { ChatInput } from "@/components/ChatInput";
 import { MessageList } from "@/components/MessageList";
@@ -61,8 +61,8 @@ export function ChatWidget({
     setIsOpen((open) => !open);
   }, []);
 
-  const sendMessage = useCallback(async () => {
-    const query = input.trim();
+  const sendMessage = useCallback(async (text?: string) => {
+    const query = (text ?? input).trim();
     if (!query || isLoading) {
       return;
     }
@@ -130,6 +130,7 @@ export function ChatWidget({
                       content: response.answer,
                       sources: response.sources,
                       language: response.language,
+                      relatedQuestions: response.related_questions,
                       streaming: false,
                     }
                   : message,
@@ -181,6 +182,23 @@ export function ChatWidget({
     }
   }, [input, isLoading, messages, resolvedApiUrl]);
 
+  const latestAssistantMessageId = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role === "assistant" && !message.streaming && !message.error) {
+        return message.id;
+      }
+    }
+    return null;
+  }, [messages]);
+
+  const handleSuggestedQuestion = useCallback(
+    (question: string) => {
+      void sendMessage(question);
+    },
+    [sendMessage],
+  );
+
   return (
     <div
       className={`teg-widget teg-widget--${position}`}
@@ -214,7 +232,12 @@ export function ChatWidget({
             </button>
           </header>
 
-          <MessageList messages={messages} />
+          <MessageList
+            messages={messages}
+            latestAssistantMessageId={latestAssistantMessageId}
+            suggestionsDisabled={isLoading}
+            onSuggestedQuestion={handleSuggestedQuestion}
+          />
 
           <footer className="teg-widget__footer">
             <ChatInput

@@ -2,13 +2,22 @@ import type { ChatMessage } from "@/types";
 import { formatResponseLanguageCode } from "@/utils/language";
 import { MessageMarkdown } from "./MessageMarkdown";
 import { SourceLinks } from "./SourceLinks";
+import { SuggestedQuestions } from "./SuggestedQuestions";
 import { TypingIndicator } from "./TypingIndicator";
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  showSuggestions?: boolean;
+  suggestionsDisabled?: boolean;
+  onSuggestedQuestion?: (question: string) => void;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  showSuggestions = false,
+  suggestionsDisabled = false,
+  onSuggestedQuestion,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isAwaitingFirstToken = message.streaming && message.content.length === 0;
   const languageCode = formatResponseLanguageCode(message.language);
@@ -38,6 +47,19 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             message.sources &&
             message.sources.length > 0 && (
               <SourceLinks sources={message.sources} />
+            )}
+          {showSuggestions &&
+            !isUser &&
+            !message.streaming &&
+            !message.error &&
+            message.relatedQuestions &&
+            message.relatedQuestions.length > 0 &&
+            onSuggestedQuestion && (
+              <SuggestedQuestions
+                questions={message.relatedQuestions}
+                disabled={suggestionsDisabled}
+                onSelect={onSuggestedQuestion}
+              />
             )}
           {showLanguage && (
             <footer className="teg-message__meta">

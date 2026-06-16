@@ -37,6 +37,8 @@ class QAState(TypedDict, total=False):
 
     # Control flow.
     fallback: bool
+    greeting: bool
+    greeting_kind: str
     off_topic: bool
     needs_clarification: bool
     clarification_question: str | None
