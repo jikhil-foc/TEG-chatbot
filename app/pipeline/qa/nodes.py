@@ -180,6 +180,7 @@ def rerank_node(state: QAState) -> dict:
         state.get("hits", []),
         top_n=state["rerank_top_n"],
         settings=state["settings"],
+        language=state.get("language"),
     )
     steps = list(state.get("steps_completed", []))
     steps.append("rerank")

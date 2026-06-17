@@ -26,7 +26,15 @@ _SYSTEM_PROMPT = (
     "which group applies, ask a specific clarifying question instead of "
     "combining conflicting details. If the context does not contain enough "
     "information to answer, politely ask the user to ask a question related "
-    "to TEG. Do not invent facts or cite sources not provided."
+    "to TEG. Do not invent facts or cite sources not provided.\n\n"
+    "Format your answer in Markdown for readability:\n"
+    "- Use short paragraphs for prose.\n"
+    "- Use bullet or numbered lists for steps, requirements, or multiple items.\n"
+    "- Use **bold** for key terms such as exam names, dates, and fees.\n"
+    "- Use Markdown tables when presenting structured data (fees, dates, levels).\n"
+    "- Keep inline source citations as [1], [2], etc. Do not use markdown links "
+    "for citations.\n"
+    "Do not wrap the entire answer in a code fence."
 )
 
 
