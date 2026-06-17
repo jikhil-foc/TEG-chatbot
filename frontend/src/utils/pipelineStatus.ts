@@ -1,4 +1,7 @@
+export const DEFAULT_PIPELINE_STEP = "thinking";
+
 const PIPELINE_STATUS_LABELS: Record<string, string> = {
+  thinking: "Thinking…",
   detect_language: "Detecting language…",
   analyze_query: "Analyzing your question…",
   retrieve: "Searching…",
@@ -13,5 +16,12 @@ const PIPELINE_STATUS_LABELS: Record<string, string> = {
 };
 
 export function pipelineStatusLabel(step: string): string {
-  return PIPELINE_STATUS_LABELS[step] ?? "Thinking…";
+  return PIPELINE_STATUS_LABELS[step] ?? PIPELINE_STATUS_LABELS.thinking;
+}
+
+export function normalizePipelineStep(step: string | undefined): string {
+  if (!step) {
+    return DEFAULT_PIPELINE_STEP;
+  }
+  return step in PIPELINE_STATUS_LABELS ? step : DEFAULT_PIPELINE_STEP;
 }

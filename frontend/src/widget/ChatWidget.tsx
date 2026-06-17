@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 import { askQuestionStream, ChatApiError } from "@/api/chat";
 import { ChatInput } from "@/components/ChatInput";
@@ -15,7 +16,7 @@ import type {
   ConversationMessage,
 } from "@/types";
 import { createMessageId } from "@/utils/id";
-import { pipelineStatusLabel } from "@/utils/pipelineStatus";
+import { DEFAULT_PIPELINE_STEP } from "@/utils/pipelineStatus";
 import { createNewSessionId, getOrCreateSessionId } from "@/utils/session";
 import "@/styles/widget.css";
 
@@ -29,7 +30,7 @@ const DEFAULT_CONFIG: Required<ChatWidgetConfig> = {
 Ask me a question about TEG, and I'll help using information from the official TEG website.
 `,
   position: "bottom-right",
-  primaryColor: "#0d6b4f",
+  primaryColor: "#9fc74a",
 };
 
 export interface ChatWidgetProps extends ChatWidgetConfig {}
@@ -67,9 +68,13 @@ export function ChatWidget({
   const resolvedApiUrl =
     apiBaseUrl || (import.meta.env.DEV ? "" : window.location.origin);
 
-  useEffect(() => {
-    document.documentElement.style.setProperty("--teg-primary", primaryColor);
-  }, [primaryColor]);
+  const widgetStyle = useMemo(
+    () =>
+      ({
+        "--teg-primary": primaryColor,
+      }) as CSSProperties,
+    [primaryColor],
+  );
 
   useEffect(() => {
     return () => {
@@ -117,7 +122,7 @@ export function ChatWidget({
           role: "assistant",
           content: "",
           streaming: true,
-          statusText: "Thinking…",
+          statusStep: DEFAULT_PIPELINE_STEP,
         },
       ]);
       setInput("");
@@ -144,7 +149,7 @@ export function ChatWidget({
                   message.id === assistantId && message.content.length === 0
                     ? {
                         ...message,
-                        statusText: pipelineStatusLabel(step),
+                        statusStep: step,
                       }
                     : message,
                 ),
@@ -157,7 +162,7 @@ export function ChatWidget({
                     ? {
                         ...message,
                         content: message.content + content,
-                        statusText: undefined,
+                        statusStep: undefined,
                       }
                     : message,
                 ),
@@ -174,7 +179,7 @@ export function ChatWidget({
                         language: response.language,
                         relatedQuestions: response.related_questions,
                         streaming: false,
-                        statusText: undefined,
+                        statusStep: undefined,
                       }
                     : message,
                 ),
@@ -189,7 +194,7 @@ export function ChatWidget({
                         content: message,
                         error: true,
                         streaming: false,
-                        statusText: undefined,
+                        statusStep: undefined,
                       }
                     : entry,
                 ),
@@ -264,6 +269,7 @@ export function ChatWidget({
     <div
       className={`teg-widget teg-widget--${position}`}
       data-open={isOpen ? "true" : "false"}
+      style={widgetStyle}
     >
       {isOpen && (
         <section

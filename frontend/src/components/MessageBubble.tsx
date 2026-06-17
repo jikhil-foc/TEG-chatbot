@@ -3,6 +3,7 @@ import { formatResponseLanguageCode } from "@/utils/language";
 import { MessageMarkdown } from "./MessageMarkdown";
 import { SourceLinks } from "./SourceLinks";
 import { SuggestedQuestions } from "./SuggestedQuestions";
+import { PipelineStatusMessage } from "./PipelineStatusMessage";
 import { TypingIndicator } from "./TypingIndicator";
 
 interface MessageBubbleProps {
@@ -20,7 +21,6 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isAwaitingFirstToken = message.streaming && message.content.length === 0;
-  const statusText = message.statusText ?? "Thinking…";
   const languageCode = formatResponseLanguageCode(message.language);
   const showLanguage =
     !isUser && !message.streaming && !message.error && languageCode !== null;
@@ -37,13 +37,10 @@ export function MessageBubble({
       {isAwaitingFirstToken ? (
         <div className="teg-message__bubble teg-message__bubble--typing">
           <TypingIndicator />
-          <p
+          <PipelineStatusMessage
             id={`teg-status-${message.id}`}
-            className="teg-message__status"
-            aria-live="polite"
-          >
-            {statusText}
-          </p>
+            step={message.statusStep}
+          />
         </div>
       ) : (
         <div className="teg-message__bubble">

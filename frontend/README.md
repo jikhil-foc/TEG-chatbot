@@ -46,7 +46,7 @@ After building, host `dist/widget/teg-chatbot.js` and `dist/widget/teg-chatbot.c
   data-subtitle="Ask about TEG levels and exams"
   data-welcome="Hello! How can I help you today?"
   data-position="bottom-right"
-  data-color="#0d6b4f"
+  data-color="#9fc74a"
 ></script>
 ```
 
