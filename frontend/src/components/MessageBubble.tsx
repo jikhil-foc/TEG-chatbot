@@ -20,6 +20,7 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isAwaitingFirstToken = message.streaming && message.content.length === 0;
+  const statusText = message.statusText ?? "Thinking…";
   const languageCode = formatResponseLanguageCode(message.language);
   const showLanguage =
     !isUser && !message.streaming && !message.error && languageCode !== null;
@@ -29,10 +30,20 @@ export function MessageBubble({
       className={`teg-message teg-message--${message.role}${message.error ? " teg-message--error" : ""}`}
       aria-label={isUser ? "Your message" : "Assistant message"}
       aria-busy={isAwaitingFirstToken ? true : undefined}
+      aria-describedby={
+        isAwaitingFirstToken ? `teg-status-${message.id}` : undefined
+      }
     >
       {isAwaitingFirstToken ? (
         <div className="teg-message__bubble teg-message__bubble--typing">
           <TypingIndicator />
+          <p
+            id={`teg-status-${message.id}`}
+            className="teg-message__status"
+            aria-live="polite"
+          >
+            {statusText}
+          </p>
         </div>
       ) : (
         <div className="teg-message__bubble">

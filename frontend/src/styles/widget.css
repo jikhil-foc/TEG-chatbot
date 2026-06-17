@@ -343,8 +343,17 @@
 
 .teg-message__bubble--typing {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   min-height: 42px;
+}
+
+.teg-message__status {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--teg-text-muted);
+  line-height: 1.4;
 }
 
 .teg-typing {

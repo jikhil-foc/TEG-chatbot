@@ -15,6 +15,7 @@ import type {
   ConversationMessage,
 } from "@/types";
 import { createMessageId } from "@/utils/id";
+import { pipelineStatusLabel } from "@/utils/pipelineStatus";
 import { createNewSessionId, getOrCreateSessionId } from "@/utils/session";
 import "@/styles/widget.css";
 
@@ -116,6 +117,7 @@ export function ChatWidget({
           role: "assistant",
           content: "",
           streaming: true,
+          statusText: "Thinking…",
         },
       ]);
       setInput("");
@@ -136,11 +138,27 @@ export function ChatWidget({
             rerank_top_n: 2,
           },
           {
+            onStatus: (step) => {
+              setMessages((prev) =>
+                prev.map((message) =>
+                  message.id === assistantId && message.content.length === 0
+                    ? {
+                        ...message,
+                        statusText: pipelineStatusLabel(step),
+                      }
+                    : message,
+                ),
+              );
+            },
             onToken: (content) => {
               setMessages((prev) =>
                 prev.map((message) =>
                   message.id === assistantId
-                    ? { ...message, content: message.content + content }
+                    ? {
+                        ...message,
+                        content: message.content + content,
+                        statusText: undefined,
+                      }
                     : message,
                 ),
               );
@@ -156,6 +174,7 @@ export function ChatWidget({
                         language: response.language,
                         relatedQuestions: response.related_questions,
                         streaming: false,
+                        statusText: undefined,
                       }
                     : message,
                 ),
@@ -170,6 +189,7 @@ export function ChatWidget({
                         content: message,
                         error: true,
                         streaming: false,
+                        statusText: undefined,
                       }
                     : entry,
                 ),
