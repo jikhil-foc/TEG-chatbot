@@ -94,6 +94,11 @@ class QdrantService:
             field_name="metadata.parent_chunk_id",
             field_schema=models.PayloadSchemaType.KEYWORD,
         )
+        self._client.create_payload_index(
+            collection_name=name,
+            field_name="metadata.language",
+            field_schema=models.PayloadSchemaType.KEYWORD,
+        )
         logger.info("Created Qdrant collection '%s'", name)
         return True
 

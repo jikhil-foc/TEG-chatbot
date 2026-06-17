@@ -9,8 +9,10 @@ from app.pipeline.llm.models import Source
 from app.pipeline.llm.reranker import rerank
 from app.pipeline.qa.query_analyzer import analyze_conversation
 from app.pipeline.qa.state import QAState
+from app.pipeline.qa.translator import translate_query
 from app.pipeline.qa.validator import validate_answer
 from app.pipeline.crawl.text import detect_query_language
+from app.pipeline.language.utils import opposite_language
 
 _DEFAULT_LANGUAGE = "English"
 
@@ -75,12 +77,29 @@ def _search_query(state: QAState) -> str:
     return state.get("effective_query") or state["query"]
 
 
+def _rerank_search_query(state: QAState) -> str:
+    if state.get("retrieval_pass") == "fallback":
+        return state.get("fallback_search_query") or _search_query(state)
+    return _search_query(state)
+
+
+def _rerank_language_boost(state: QAState) -> str | None:
+    if state.get("retrieval_pass") == "fallback":
+        return None
+    return state.get("language")
+
+
 def detect_language_node(state: QAState) -> dict:
     """Detect the query language so the answer can reply in kind."""
     language = detect_query_language(state["query"]) or _DEFAULT_LANGUAGE
     steps = list(state.get("steps_completed", []))
     steps.append("detect_language")
-    return {"language": language, "steps_completed": steps}
+    return {
+        "language": language,
+        "fallback_language": opposite_language(language),
+        "retrieval_language": None,
+        "steps_completed": steps,
+    }
 
 
 def analyze_query_node(state: QAState) -> dict:
@@ -163,28 +182,84 @@ def clarify_node(state: QAState) -> dict:
     }
 
 
-def retrieve_node(state: QAState) -> dict:
-    """Run hybrid dense + BM25 retrieval for the query."""
+def retrieve_primary_node(state: QAState) -> dict:
+    """Run hybrid retrieval scoped to the detected query language."""
     search_query = _search_query(state)
-    hits = state["retriever"].search(search_query, top_k=state["top_k"])
+    target_language = state["language"]
+    hits = state["retriever"].search(
+        search_query,
+        top_k=state["top_k"],
+        language=target_language,
+    )
     steps = list(state.get("steps_completed", []))
-    steps.append("retrieve")
-    return {"hits": hits, "steps_completed": steps}
+    steps.append("retrieve_primary")
+    return {
+        "hits": hits,
+        "retrieval_language": target_language,
+        "retrieval_pass": "primary",
+        "steps_completed": steps,
+    }
+
+
+def translate_fallback_query_node(state: QAState) -> dict:
+    """Translate the query for a fallback search in the other language."""
+    query = _search_query(state)
+    fallback_language = state["fallback_language"]
+    translated = translate_query(
+        query,
+        fallback_language,
+        settings=state["settings"],
+    )
+    steps = list(state.get("steps_completed", []))
+    steps.append("translate_fallback_query")
+    return {
+        "fallback_search_query": translated,
+        "steps_completed": steps,
+    }
+
+
+def retrieve_fallback_node(state: QAState) -> dict:
+    """Run hybrid retrieval scoped to the fallback language."""
+    search_query = state.get("fallback_search_query") or _search_query(state)
+    fallback_language = state["fallback_language"]
+    hits = state["retriever"].search(
+        search_query,
+        top_k=state["top_k"],
+        language=fallback_language,
+    )
+    steps = list(state.get("steps_completed", []))
+    steps.append("retrieve_fallback")
+    return {
+        "hits": hits,
+        "retrieval_language": fallback_language,
+        "retrieval_pass": "fallback",
+        "steps_completed": steps,
+    }
 
 
 def rerank_node(state: QAState) -> dict:
     """Rescore retrieved hits with the Cohere rerank API."""
-    search_query = _search_query(state)
+    search_query = _rerank_search_query(state)
     reranked = rerank(
         search_query,
         state.get("hits", []),
         top_n=state["rerank_top_n"],
         settings=state["settings"],
-        language=state.get("language"),
+        language=_rerank_language_boost(state),
     )
     steps = list(state.get("steps_completed", []))
     steps.append("rerank")
     return {"reranked": reranked, "steps_completed": steps}
+
+
+def is_relevant_context(state: QAState) -> bool:
+    """Return True when reranked hits meet the relevance threshold."""
+    reranked = state.get("reranked", [])
+    if not reranked:
+        return False
+    threshold = state["settings"].rerank_relevance_threshold
+    top_score = max(hit.get("rerank_score", 0.0) for hit in reranked)
+    return top_score >= threshold
 
 
 def fallback_node(state: QAState) -> dict:
@@ -208,6 +283,7 @@ def generate_answer_node(state: QAState) -> dict:
         state.get("reranked", []),
         settings=state["settings"],
         language=state.get("language"),
+        context_language=state.get("retrieval_language"),
     )
     steps = list(state.get("steps_completed", []))
     steps.append("generate_answer")

@@ -25,8 +25,11 @@ from app.pipeline.qa.nodes import (
     fallback_node,
     generate_answer_node,
     greeting_node,
+    is_relevant_context,
     rerank_node,
-    retrieve_node,
+    retrieve_fallback_node,
+    retrieve_primary_node,
+    translate_fallback_query_node,
     validation_node,
 )
 from app.pipeline.qa.state import QAState
@@ -44,18 +47,28 @@ def _route_after_analyze(state: QAState) -> str:
         return "fallback"
     if state.get("needs_clarification"):
         return "clarify"
-    return "retrieve"
+    return "retrieve_primary"
 
 
-def _relevance_gate(state: QAState) -> str:
-    """Route to answer generation when reranked context is relevant enough."""
-    reranked = state.get("reranked", [])
-    if not reranked:
-        return "fallback"
+def _route_after_primary_rerank(state: QAState) -> str:
+    """Continue to answer generation or try fallback-language retrieval."""
+    if is_relevant_context(state):
+        return "generate_answer"
+    return "translate_fallback_query"
 
-    threshold = state["settings"].rerank_relevance_threshold
-    top_score = max(hit.get("rerank_score", 0.0) for hit in reranked)
-    return "generate_answer" if top_score >= threshold else "fallback"
+
+def _route_after_fallback_rerank(state: QAState) -> str:
+    """Answer from fallback context or return a canned no-answer message."""
+    if is_relevant_context(state):
+        return "generate_answer"
+    return "fallback"
+
+
+def _route_after_rerank(state: QAState) -> str:
+    """Route after rerank based on which retrieval pass just completed."""
+    if state.get("retrieval_pass") == "fallback":
+        return _route_after_fallback_rerank(state)
+    return _route_after_primary_rerank(state)
 
 
 def _route_validation(state: QAState) -> str:
@@ -74,7 +87,9 @@ def build_qa_graph():
     workflow.add_node("analyze_query", analyze_query_node)
     workflow.add_node("clarify", clarify_node)
     workflow.add_node("greeting", greeting_node)
-    workflow.add_node("retrieve", retrieve_node)
+    workflow.add_node("retrieve_primary", retrieve_primary_node)
+    workflow.add_node("translate_fallback_query", translate_fallback_query_node)
+    workflow.add_node("retrieve_fallback", retrieve_fallback_node)
     workflow.add_node("rerank", rerank_node)
     workflow.add_node("fallback", fallback_node)
     workflow.add_node("generate_answer", generate_answer_node)
@@ -86,16 +101,27 @@ def build_qa_graph():
     workflow.add_conditional_edges(
         "analyze_query",
         _route_after_analyze,
-        {"greeting": "greeting", "fallback": "fallback", "clarify": "clarify", "retrieve": "retrieve"},
+        {
+            "greeting": "greeting",
+            "fallback": "fallback",
+            "clarify": "clarify",
+            "retrieve_primary": "retrieve_primary",
+        },
     )
     workflow.add_edge("greeting", END)
     workflow.add_edge("clarify", END)
-    workflow.add_edge("retrieve", "rerank")
+    workflow.add_edge("retrieve_primary", "rerank")
     workflow.add_conditional_edges(
         "rerank",
-        _relevance_gate,
-        {"generate_answer": "generate_answer", "fallback": "fallback"},
+        _route_after_rerank,
+        {
+            "generate_answer": "generate_answer",
+            "translate_fallback_query": "translate_fallback_query",
+            "fallback": "fallback",
+        },
     )
+    workflow.add_edge("translate_fallback_query", "retrieve_fallback")
+    workflow.add_edge("retrieve_fallback", "rerank")
     workflow.add_edge("fallback", END)
     workflow.add_edge("generate_answer", "citations")
     workflow.add_edge("citations", "validation")
@@ -113,6 +139,12 @@ def _get_graph():
     if _compiled_graph is None:
         _compiled_graph = build_qa_graph()
     return _compiled_graph
+
+
+def reset_qa_graph() -> None:
+    """Clear the cached compiled graph (used in tests)."""
+    global _compiled_graph
+    _compiled_graph = None
 
 
 def get_qa_graph():

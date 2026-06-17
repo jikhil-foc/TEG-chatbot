@@ -10,6 +10,8 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
+import _bootstrap  # noqa: F401
+
 from app.core.logging import configure_logging
 from app.pipeline.chunk import INPUT_PATH, OUTPUT_PATH, run_pipeline
 

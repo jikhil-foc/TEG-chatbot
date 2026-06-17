@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.pipeline.crawl.text import detect_language_from_text, detect_query_language
+from app.pipeline.language.utils import opposite_language
 
 
 @pytest.mark.parametrize(
@@ -59,3 +60,8 @@ def test_detect_language_from_text_unchanged_for_long_pages() -> None:
         ]
     )
     assert detect_language_from_text(english_page) == "English"
+
+
+def test_opposite_language() -> None:
+    assert opposite_language("English") == "Irish"
+    assert opposite_language("Irish") == "English"
