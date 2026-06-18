@@ -1,4 +1,10 @@
-"""Orchestration stage: combine HTML/PDF crawl stages and expose entry points."""
+"""Orchestration stage for the website crawl pipeline.
+
+Runs HTML deep-crawl first, collects PDF links discovered on those pages, then
+optionally fetches and extracts PDFs in a second pass. This split keeps browser
+crawling and HTTP PDF downloads independent so each stage can use its own
+concurrency and timeout settings.
+"""
 
 from __future__ import annotations
 
@@ -38,6 +44,8 @@ async def crawl_website(
         include_external=include_external,
     )
 
+    # PDFs are not followed during the browser crawl (see EXCLUDED_PATTERNS); they
+    # are collected from link metadata and processed separately.
     if include_pdf and pdf_links:
         pages.extend(await crawl_pdfs(sorted(pdf_links)))
 
@@ -54,8 +62,8 @@ def run_crawl(
 ) -> list[CrawledPage]:
     """Synchronous wrapper around :func:`crawl_website`.
 
-    When ``save_json`` is True, the crawled results are written to a JSON file
-    under :data:`app.pipeline.crawl.config.OUTPUT_DIR`.
+    When ``save_json`` is True, the crawled results are written to
+    ``crawled-data.json`` under :data:`app.config.data_paths.DATA_DIR`.
     """
     start_url = url or settings.website_url
     pages = run_async(

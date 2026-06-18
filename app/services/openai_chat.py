@@ -2,7 +2,7 @@
 
 Wraps :class:`langchain_openai.ChatOpenAI` with explicit configuration and
 built-in retry on transient API failures, mirroring
-:func:`app.pipeline.embedding.dense.build_dense_embeddings`.
+:func:`app.services.openai_embeddings.build_dense_embeddings`.
 """
 
 from __future__ import annotations
@@ -37,5 +37,6 @@ def build_chat_model(
         api_key=settings.openai_api_key,
         temperature=0,
         max_retries=settings.max_retries,
+        # EmbeddingSettings bundles a single HTTP timeout for OpenAI and Qdrant.
         timeout=settings.qdrant_timeout,
     )

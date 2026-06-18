@@ -49,6 +49,7 @@ class QdrantService:
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key,
             timeout=int(settings.qdrant_timeout),
+            # Avoid startup failures when client and server minor versions differ.
             check_compatibility=False,
         )
 

@@ -177,6 +177,7 @@ class HybridRetriever:
         collected: list[dict] = []
         offset = None
         client = self._service.client
+        # Scroll in pages because Qdrant does not return all siblings in one call.
         while True:
             points, offset = client.scroll(
                 collection_name=self._settings.collection_name,

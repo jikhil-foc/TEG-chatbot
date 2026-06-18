@@ -12,6 +12,7 @@ _CITATION_RE = re.compile(r"\[(\d+)\]")
 
 
 def is_off_topic_answer(answer: str) -> bool:
+    """Return True when the answer is empty or matches a canned fallback phrase."""
     normalized = answer.strip()
     if not normalized:
         return True
@@ -22,6 +23,11 @@ def is_off_topic_answer(answer: str) -> bool:
 
 
 def extract_cited_sources(answer: str, reranked: list[dict]) -> list[Source]:
+    """Parse ``[n]`` citations in the answer and map them to ``Source`` objects.
+
+    Returns an empty list for off-topic answers or when no valid citation
+    indices appear, so the API never surfaces sources for generic fallbacks.
+    """
     if is_off_topic_answer(answer):
         return []
 

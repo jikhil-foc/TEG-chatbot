@@ -1,4 +1,8 @@
-"""Weak context fallback node."""
+"""Weak context fallback node.
+
+Terminal path when both primary and fallback retrieval fail the rerank
+relevance threshold; returns a bilingual canned off-topic message.
+"""
 
 from __future__ import annotations
 

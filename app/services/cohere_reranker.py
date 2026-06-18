@@ -23,7 +23,10 @@ _client_api_key: str | None = None
 
 
 def _get_client(api_key: str) -> "cohere.Client":
-    """Lazily build and cache the Cohere client for the given API key."""
+    """Lazily build and cache the Cohere client for the given API key.
+
+    Rebuilds when the key changes so dev hot-reloads pick up ``.env`` updates.
+    """
     global _client, _client_api_key
     if _client is None or _client_api_key != api_key:
         import cohere
@@ -35,7 +38,11 @@ def _get_client(api_key: str) -> "cohere.Client":
 
 
 def _chunk_content_language(hit: dict) -> str | None:
-    """Detect Irish vs English from passage text, with metadata fallback."""
+    """Detect Irish vs English from passage text, with metadata fallback.
+
+    Content-based detection is preferred because breadcrumbs prepended at index
+    time can skew metadata when the underlying block is in another language.
+    """
     content = hit.get("content", "") or ""
     detected = detect_language_from_text(content)
     if detected:
@@ -103,6 +110,8 @@ def rerank(
         query=query,
         documents=documents,
         model=settings.cohere_rerank_model,
+        # Score every candidate so language-boost re-ranking can reorder the
+        # full pool before the final top_n slice.
         top_n=len(results),
     )
 

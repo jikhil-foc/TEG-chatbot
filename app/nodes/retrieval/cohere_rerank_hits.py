@@ -1,4 +1,8 @@
-"""Cohere rerank node."""
+"""Cohere rerank node.
+
+Shared by primary and fallback retrieval passes; query and language-boost
+selection depend on ``retrieval_pass`` (see :mod:`app.nodes.shared.search_query`).
+"""
 
 from __future__ import annotations
 

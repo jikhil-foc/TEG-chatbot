@@ -1,4 +1,9 @@
-"""Answer validation node."""
+"""Answer validation node.
+
+Checks whether the generated answer is grounded in the reranked context. The
+graph may loop back to ``generate_answer`` when validation fails and retries
+remain (see ``_route_validation`` in :mod:`app.graphs.qa_rag_graph`).
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,7 @@ from app.qa.answer_topic_validator import validate_answer
 
 
 def validation_node(state: QAState) -> dict:
+    """Validate the answer against retrieved context and increment retry count."""
     passed = validate_answer(
         search_query(state),
         state.get("answer", ""),

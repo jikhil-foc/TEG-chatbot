@@ -1,4 +1,8 @@
-"""Fallback-language hybrid retrieval node."""
+"""Fallback-language hybrid retrieval node.
+
+Second retrieval pass after primary rerank scores fall below threshold: searches
+in ``fallback_language`` using the LLM-translated ``fallback_search_query``.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +11,7 @@ from app.nodes.shared.search_query import search_query
 
 
 def retrieve_fallback_node(state: QAState) -> dict:
+    """Retrieve top-k chunks in the opposite language from the user's query."""
     query = state.get("fallback_search_query") or search_query(state)
     fallback_language = state["fallback_language"]
     hits = state["retriever"].search(

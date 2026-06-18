@@ -1,4 +1,7 @@
-"""Ingestion graph nodes."""
+"""Ingestion graph nodes.
+
+Linear pipeline: crawl → detect language → chunk → embed to Qdrant.
+"""
 
 from app.nodes.ingestion.chunk_crawled_pages import chunk_node
 from app.nodes.ingestion.crawl_teg_website import crawl_node

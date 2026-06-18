@@ -6,6 +6,7 @@ from app.models.answer_types import Source
 
 
 def to_source(hit: dict) -> Source:
+    """Map a reranked retrieval hit dict to an API ``Source`` model."""
     metadata = hit.get("metadata") or {}
     return Source(
         chunk_id=hit.get("chunk_id", ""),

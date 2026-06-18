@@ -18,7 +18,12 @@ from app.services.language_detector import detect_language, to_markdown
 
 
 def collect_pdf_links(result, base_url: str, same_domain: bool) -> set[str]:
-    """Pull absolute ``.pdf`` URLs out of a crawl result's discovered links."""
+    """Pull absolute ``.pdf`` URLs out of a crawl result's discovered links.
+
+    crawl4ai may expose links as a dict (``internal`` / ``external`` lists) or
+    a flat list depending on version and crawl mode; both shapes are handled here.
+    Fragment identifiers are stripped so the same PDF is not collected twice.
+    """
     found: set[str] = set()
     links = getattr(result, "links", None) or {}
     base_host = urlparse(base_url).netloc
@@ -61,6 +66,8 @@ async def crawl_html_pages(
             include_external=include_external,
             max_pages=max_pages,
             filter_chain=FilterChain([
+                # reverse=True skips URLs matching EXCLUDED_PATTERNS (e.g. *.pdf)
+                # while still recording those links for the PDF extraction stage.
                 URLPatternFilter(patterns=EXCLUDED_PATTERNS, reverse=True),
             ]),
         ),

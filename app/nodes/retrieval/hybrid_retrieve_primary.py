@@ -1,4 +1,8 @@
-"""Primary hybrid retrieval node."""
+"""Primary hybrid retrieval node.
+
+First retrieval pass: searches Qdrant in the user's detected query language
+(``state["language"]``) using the effective query from intent analysis.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +11,7 @@ from app.nodes.shared.search_query import search_query
 
 
 def retrieve_primary_node(state: QAState) -> dict:
+    """Retrieve top-k chunks filtered to the user's query language."""
     query = search_query(state)
     target_language = state["language"]
     hits = state["retriever"].search(

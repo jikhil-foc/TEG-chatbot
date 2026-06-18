@@ -1,4 +1,9 @@
-"""External system integrations."""
+"""External system integrations for the RAG pipeline.
+
+Wraps OpenAI (embeddings + chat), Cohere reranking, Qdrant hybrid storage,
+BM25 sparse encoding, and crawl-time language detection behind a stable import
+surface for pipeline nodes and API routes.
+"""
 
 from app.services.bm25_encoder import BM25SparseEmbeddings
 from app.services.cohere_reranker import rerank

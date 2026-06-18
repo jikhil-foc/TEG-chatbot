@@ -87,7 +87,11 @@ def generate_answer(
 
 
 def _chunk_content(chunk_content: object) -> str:
-    """Normalise streamed model chunks to plain text."""
+    """Normalise streamed model chunks to plain text.
+
+    LangChain may emit ``content`` as a string or as a list of structured
+    blocks (e.g. ``{"type": "text", "text": "..."}``); both shapes are handled.
+    """
     if isinstance(chunk_content, str):
         return chunk_content
     if isinstance(chunk_content, list):
@@ -108,7 +112,10 @@ def generate_answer_stream(
     language: str | None = None,
     context_language: str | None = None,
 ) -> Iterator[str]:
-    """Stream a grounded answer token-by-token from the ``reranked`` context."""
+    """Stream a grounded answer token-by-token from the ``reranked`` context.
+
+    Mirrors :func:`generate_answer` but yields incremental text for SSE clients.
+    """
     if not reranked:
         yield (
             "Please ask questions related to TEG. "

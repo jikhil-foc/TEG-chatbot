@@ -125,6 +125,7 @@ class BM25SparseEmbeddings(SparseEmbeddings):
             index = self._vocab.get(token)
             if index is None or index in seen:
                 continue
+            # Query vectors are bag-of-words; duplicate tokens share one index.
             weight = self._idf.get(token, 0.0)
             if weight:
                 indices.append(index)

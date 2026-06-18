@@ -1,4 +1,9 @@
-"""Canned greeting and fallback responses for QA nodes."""
+"""Canned greeting and fallback responses for QA nodes.
+
+Bilingual message tables keep greeting and off-topic replies consistent across
+nodes without another LLM call. ``OFF_TOPIC_MARKERS`` lets citation parsing
+treat model-generated fallback text as having no citable sources.
+"""
 
 from __future__ import annotations
 

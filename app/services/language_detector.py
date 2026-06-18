@@ -101,6 +101,7 @@ def _score_language(tokens: list[str], *, include_fada: bool) -> tuple[int, int]
 
 
 def _language_from_scores(irish: int, english: int) -> str | None:
+    """Return the winning language, or ``None`` when scores are tied or zero."""
     if irish == 0 and english == 0:
         return None
     if irish == english:

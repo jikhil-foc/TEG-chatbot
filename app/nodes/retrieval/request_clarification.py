@@ -1,4 +1,8 @@
-"""Clarification request node."""
+"""Clarification request node.
+
+Short-circuits retrieval when intent analysis decides the user query is too
+vague; returns a follow-up question as the final answer.
+"""
 
 from __future__ import annotations
 

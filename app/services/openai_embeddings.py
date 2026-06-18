@@ -39,5 +39,6 @@ def build_dense_embeddings(settings: EmbeddingSettings) -> OpenAIEmbeddings:
         dimensions=settings.embedding_dim,
         chunk_size=settings.embedding_batch_size,
         max_retries=settings.max_retries,
+        # EmbeddingSettings bundles a single HTTP timeout for OpenAI and Qdrant.
         timeout=settings.qdrant_timeout,
     )

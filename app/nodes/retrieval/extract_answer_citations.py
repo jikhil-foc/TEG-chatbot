@@ -1,4 +1,8 @@
-"""Citation extraction node."""
+"""Citation extraction node.
+
+Parses ``[n]`` markers from the grounded answer and attaches matching sources
+for the API response.
+"""
 
 from __future__ import annotations
 

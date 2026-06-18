@@ -62,6 +62,8 @@ async def _fetch_pdf_from_url(
                     success=False,
                     error=f"Unexpected content type: {content_type or 'unknown'}",
                 )
+            # pypdf parsing is CPU-bound and blocking; run off the event loop so
+            # concurrent PDF downloads are not stalled while one file is parsed.
             markdown, metadata = await asyncio.to_thread(
                 _extract_pdf_text, response.content
             )
@@ -92,7 +94,11 @@ async def _fetch_pdf_from_url(
 
 
 async def crawl_pdfs(pdf_urls: list[str]) -> list[CrawledPage]:
-    """Extract text and metadata from PDF URLs via in-memory HTTP fetch."""
+    """Extract text and metadata from PDF URLs via in-memory HTTP fetch.
+
+    Downloads are capped by ``PDF_MAX_CONCURRENT`` so a large link batch does not
+    overwhelm the origin server or exhaust local memory.
+    """
     if not pdf_urls:
         return []
 

@@ -1,4 +1,9 @@
-"""Grounded answer generation node."""
+"""Grounded answer generation node.
+
+Passes ``retrieval_language`` as ``context_language`` so the LLM can translate
+facts when the user asks in one language but relevant chunks were found in the
+other (bilingual fallback path).
+"""
 
 from __future__ import annotations
 

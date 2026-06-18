@@ -1,4 +1,8 @@
-"""TEG website crawler pipeline."""
+"""Public entry point for the TEG website crawl pipeline.
+
+Re-exports crawl orchestration, persistence helpers and the :class:`CrawledPage`
+model so API routes and LangGraph nodes can depend on a single import path.
+"""
 
 from app.pipelines.ingestion.crawl_runner import crawl_website, run_crawl
 from app.pipelines.ingestion.crawl_json_writer import save_pages_json

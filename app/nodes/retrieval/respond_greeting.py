@@ -1,4 +1,8 @@
-"""Greeting response node."""
+"""Greeting response node.
+
+Returns a canned bilingual greeting when intent analysis classifies the input
+as hello/thanks/farewell, bypassing retrieval entirely.
+"""
 
 from __future__ import annotations
 

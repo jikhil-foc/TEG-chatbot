@@ -1,4 +1,9 @@
-"""Analyze user query node."""
+"""Analyze user query node.
+
+Maps :func:`app.qa.query_intent_analyzer.analyze_conversation` statuses onto
+graph routing flags (``greeting``, ``off_topic``, ``needs_clarification``) or
+sets ``effective_query`` for retrieval when the question is on-topic.
+"""
 
 from __future__ import annotations
 

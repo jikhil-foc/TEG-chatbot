@@ -6,6 +6,11 @@ from app.graphs.qa_state import QAState
 
 
 def is_relevant_context(state: QAState) -> bool:
+    """Return whether the top rerank score meets the configured threshold.
+
+    Used by the QA graph to decide between answer generation and the bilingual
+    fallback path (translate → retrieve in the other language → rerank again).
+    """
     reranked = state.get("reranked", [])
     if not reranked:
         return False

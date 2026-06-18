@@ -1,4 +1,8 @@
-"""Detect query language node."""
+"""Detect query language node.
+
+Sets ``language`` and ``fallback_language`` (Irish ↔ English) used by the
+bilingual retrieval and reranking strategy in the QA graph.
+"""
 
 from __future__ import annotations
 

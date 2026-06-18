@@ -1,4 +1,8 @@
-"""Translate query for fallback retrieval node."""
+"""Translate query for fallback retrieval node.
+
+When primary-language retrieval scores poorly, this node LLM-translates the
+query into ``fallback_language`` before the second hybrid search pass.
+"""
 
 from __future__ import annotations
 

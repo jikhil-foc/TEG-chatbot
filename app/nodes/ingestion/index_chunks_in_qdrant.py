@@ -1,4 +1,8 @@
-"""Index chunks in Qdrant ingestion node."""
+"""Index chunked documents in Qdrant LangGraph node.
+
+Final step of the ingestion graph: fits BM25, uploads dense + sparse vectors,
+and records indexing statistics in state.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +15,7 @@ from app.pipelines.ingestion.langchain_page_chunker import OUTPUT_PATH
 
 
 def embed_to_qdrant_node(state: IngestionState) -> dict:
+    """Index ``chunked_file`` into Qdrant, honouring ``recreate`` from state."""
     settings = get_embedding_settings()
     input_path = Path(state["chunked_file"]) if state.get("chunked_file") else OUTPUT_PATH
     index_summary = run_indexing(

@@ -1,4 +1,8 @@
-"""Enrich crawled pages with language tags."""
+"""Re-detect page languages LangGraph node.
+
+Runs between crawl and chunk so every page carries an Irish/English tag before
+chunking and Qdrant metadata indexing.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +13,7 @@ from app.pipelines.ingestion.page_language_enricher import run_language_detectio
 
 
 def detect_language_node(state: IngestionState) -> dict:
+    """Tag or re-tag languages on pages in ``crawled_file``."""
     crawled_path = Path(state["crawled_file"])
     summary = run_language_detection(
         crawled_path,

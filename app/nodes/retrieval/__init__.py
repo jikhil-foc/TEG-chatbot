@@ -1,4 +1,9 @@
-"""Retrieval / QA graph nodes."""
+"""Retrieval / QA graph nodes.
+
+Implements bilingual hybrid RAG: intent routing, language-filtered retrieval,
+Cohere reranking with relevance gating, grounded answer generation, citation
+extraction, and optional validation retries.
+"""
 
 from app.nodes.retrieval.analyze_user_query import analyze_query_node
 from app.nodes.retrieval.cohere_rerank_hits import rerank_node

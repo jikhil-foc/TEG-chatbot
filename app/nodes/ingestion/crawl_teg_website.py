@@ -1,4 +1,9 @@
-"""Crawl TEG website ingestion node."""
+"""Crawl TEG website LangGraph node.
+
+First step of the ingestion graph. Crawl results are persisted here (not inside
+``run_crawl``) so the graph controls ``crawled_file`` and can skip disk writes
+when ``save_json`` is false.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,7 @@ from app.pipelines.ingestion.teg_site_crawler import run_crawl, save_pages_json
 
 
 def crawl_node(state: IngestionState) -> dict:
+    """Deep-crawl the site and record crawl statistics in graph state."""
     start_url = state["url"]
     pages = run_crawl(
         url=start_url,
@@ -15,6 +21,7 @@ def crawl_node(state: IngestionState) -> dict:
         max_pages=state["max_pages"],
         include_pdf=state["include_pdf"],
         include_external=state["include_external"],
+        # Graph owns persistence so ``crawled_file`` stays in sync with state.
         save_json=False,
     )
 

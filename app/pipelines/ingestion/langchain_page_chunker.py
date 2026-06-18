@@ -193,6 +193,8 @@ def split_into_blocks(text: str) -> list[str]:
         if _LIST_RE.match(line):
             buffer = [line]
             i += 1
+            # Absorb subsequent list items and indented continuation lines so
+            # wrapped bullet text stays in one atomic block.
             while i < n and lines[i].strip() and (
                 _LIST_RE.match(lines[i]) or lines[i].startswith((" ", "\t"))
             ):
@@ -365,6 +367,8 @@ def split_pdf(pages: list[dict]) -> list[ChildChunk]:
             chunks.append(
                 ChildChunk(
                     chunk_id=chunk_id,
+                    # PDFs have no header hierarchy; point parent at self so
+                    # parent expansion in retrieval is a no-op for PDF hits.
                     parent_chunk_id=chunk_id,
                     url=url,
                     title=title,

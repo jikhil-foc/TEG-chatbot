@@ -1,7 +1,7 @@
 """Load pre-chunked JSON documents into LangChain ``Document`` objects.
 
 The chunked JSON is a flat array produced by
-:mod:`app.pipelines.ingestion.langchain_page_chunker. Each record is mapped to a ``Document``
+:mod:`app.pipelines.ingestion.langchain_page_chunker`. Each record is mapped to a ``Document``
 whose ``metadata`` carries exactly the fields required for indexing/retrieval,
 with ``token_count`` computed locally via ``tiktoken`` (it is not present in the
 source file).
@@ -75,6 +75,11 @@ def build_contextualized_content(
 
 
 def _record_to_document(record: dict[str, Any], encoding_name: str) -> Document:
+    """Map one chunked JSON record to a LangChain Document for vector indexing.
+
+    ``page_content`` includes the breadcrumb prefix for retrieval; ``raw_content``
+    in metadata preserves the original block for parent-section reassembly.
+    """
     raw_content = record.get("content", "") or ""
     title = record.get("title", "") or ""
     header_path = record.get("header_path", []) or []

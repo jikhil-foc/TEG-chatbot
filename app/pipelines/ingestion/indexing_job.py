@@ -44,6 +44,8 @@ def run_indexing(
     if not documents:
         raise ValueError(f"No indexable documents found in {input_path}")
 
+    # BM25 vocabulary and IDF weights must be derived from the same corpus that
+    # is uploaded to Qdrant; query-time sparse vectors use this persisted state.
     logger.info("Fitting BM25 sparse encoder on %d documents", len(documents))
     sparse = BM25SparseEmbeddings.fit(
         corpus=[doc.page_content for doc in documents],

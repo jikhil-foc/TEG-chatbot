@@ -1,4 +1,8 @@
-"""Chunk crawled pages node."""
+"""Chunk crawled pages LangGraph node.
+
+Runs the LangChain chunking pipeline on ``crawled_file`` and records chunk
+counts in graph state for the ingestion result summary.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +13,7 @@ from app.pipelines.ingestion.langchain_page_chunker import OUTPUT_PATH, run_pipe
 
 
 def chunk_node(state: IngestionState) -> dict:
+    """Split crawled pages into parent-child chunks and optionally write JSON."""
     input_path = Path(state["crawled_file"])
     output_path = OUTPUT_PATH if state.get("save_json", True) else None
     result = run_pipeline(input_path, output_path)
