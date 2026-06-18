@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.pipeline.embedding.config import EmbeddingSettings
-from app.pipeline.qa.graph import (
+from app.config.embedding_settings import EmbeddingSettings
+from app.graphs.qa_rag_graph import (
     _route_after_fallback_rerank,
     _route_after_primary_rerank,
     _route_after_rerank,
 )
-from app.pipeline.qa.nodes import (
+from app.nodes.retrieval import (
     detect_language_node,
     retrieve_fallback_node,
     retrieve_primary_node,
@@ -80,7 +80,7 @@ def test_route_after_rerank_uses_retrieval_pass() -> None:
     assert _route_after_rerank(state_fallback) == "generate_answer"
 
 
-@patch("app.pipeline.qa.nodes.translate_query", return_value="Cad iad na seirbhísí?")
+@patch("app.nodes.retrieval.translate_query_for_fallback.translate_query", return_value="Cad iad na seirbhísí?")
 def test_translate_fallback_query_node(mock_translate: MagicMock) -> None:
     result = translate_fallback_query_node(
         {

@@ -2,9 +2,9 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException
 
-from app.pipeline.ingestion import IngestionConfig, IngestionResult
-from app.schemas.ingestion import IngestRequest
-from app.services import ingestion_service
+from app.models.ingest_request import IngestionConfig, IngestionResult
+from app.models.ingestion import IngestRequest
+from app.application import teg_ingest_facade as ingestion_service
 
 router = APIRouter()
 

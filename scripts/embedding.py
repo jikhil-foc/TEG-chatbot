@@ -26,9 +26,9 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401 — project root on sys.path when run as a file
 
-from app.core.logging import configure_logging
-from app.pipeline.embedding.config import get_embedding_settings
-from app.pipeline.embedding.orchestrator import run_indexing, run_search
+from app.utils.logging_config import configure_logging
+from app.config.embedding_settings import get_embedding_settings
+from app.pipelines.ingestion.indexing_job import run_indexing, run_search
 
 
 def _build_parser() -> argparse.ArgumentParser:

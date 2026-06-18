@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.pipeline.crawl.text import detect_language_from_text, detect_query_language
-from app.pipeline.language.utils import opposite_language
+from app.services.language_detector import detect_language_from_text, detect_query_language
+from app.utils.language import opposite_language
 
 
 @pytest.mark.parametrize(

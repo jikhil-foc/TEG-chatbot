@@ -5,8 +5,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
-from app.pipeline.chunk import INPUT_PATH, OUTPUT_PATH, run_pipeline
-from app.schemas.chunk import ChunkingSummaryModel, ChunkRequest, ChunkResponse
+from app.pipelines.ingestion.langchain_page_chunker import INPUT_PATH, OUTPUT_PATH, run_pipeline
+from app.models.chunk import ChunkingSummaryModel, ChunkRequest, ChunkResponse
 
 router = APIRouter()
 

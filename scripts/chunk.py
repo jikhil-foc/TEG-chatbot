@@ -12,8 +12,8 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from app.core.logging import configure_logging
-from app.pipeline.chunk import INPUT_PATH, OUTPUT_PATH, run_pipeline
+from app.utils.logging_config import configure_logging
+from app.pipelines.ingestion.langchain_page_chunker import INPUT_PATH, OUTPUT_PATH, run_pipeline
 
 
 def main(argv: list[str] | None = None) -> int:

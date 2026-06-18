@@ -5,9 +5,9 @@ from collections.abc import Iterator
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
-from app.pipeline.qa.conversation import ConversationMessage
-from app.schemas.ask import AskRequest
-from app.services import ask_service
+from app.qa.conversation_history import ConversationMessage
+from app.models.ask import AskRequest
+from app.application import teg_qa_facade as ask_service
 
 router = APIRouter()
 

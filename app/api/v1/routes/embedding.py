@@ -3,11 +3,11 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
-from app.pipeline.embedding.cache import get_retriever, invalidate_retriever
-from app.pipeline.embedding.config import get_embedding_settings
-from app.pipeline.embedding.models import IndexSummary, SearchResult
-from app.pipeline.embedding.orchestrator import run_indexing
-from app.schemas.embedding import IndexRequest, SearchRequest, SearchResponse
+from app.pipelines.retrieval.retriever_cache import get_retriever, invalidate_retriever
+from app.config.embedding_settings import get_embedding_settings
+from app.models.embedding import IndexSummary, SearchResult
+from app.pipelines.ingestion.indexing_job import run_indexing
+from app.models.embedding import IndexRequest, SearchRequest, SearchResponse
 
 router = APIRouter()
 
