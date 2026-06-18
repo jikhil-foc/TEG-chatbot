@@ -10,7 +10,10 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-import _bootstrap  # noqa: F401
+if __package__:
+    from scripts import _bootstrap  # noqa: F401
+else:
+    import _bootstrap  # noqa: F401
 
 from app.utils.logging_config import configure_logging
 from app.pipelines.ingestion.langchain_page_chunker import INPUT_PATH, OUTPUT_PATH, run_pipeline

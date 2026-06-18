@@ -19,6 +19,8 @@ class ChunkMetadata(BaseModel):
     chunk_index: int = 0
     raw_content: str = ""
     token_count: int
+    section_id: str = ""
+    content_hash: str = ""
 
 
 class SearchResult(BaseModel):
@@ -38,6 +40,7 @@ class IndexSummary(BaseModel):
     uploaded: int
     batches: int
     recreated_collection: bool
+    dense_embeddings_generated: int = 0
 
 
 class IndexRequest(BaseModel):

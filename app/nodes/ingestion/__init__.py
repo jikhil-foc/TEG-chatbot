@@ -5,12 +5,18 @@ Linear pipeline: crawl → detect language → chunk → embed to Qdrant.
 
 from app.nodes.ingestion.chunk_crawled_pages import chunk_node
 from app.nodes.ingestion.crawl_teg_website import crawl_node
+from app.nodes.ingestion.detect_content_changes import detect_content_changes_node
 from app.nodes.ingestion.enrich_page_languages import detect_language_node
 from app.nodes.ingestion.index_chunks_in_qdrant import embed_to_qdrant_node
+from app.nodes.ingestion.populate_content_registry import populate_content_registry_node
+from app.nodes.ingestion.sync_changed_sections_to_qdrant import sync_changed_sections_node
 
 __all__ = [
     "chunk_node",
     "crawl_node",
+    "detect_content_changes_node",
     "detect_language_node",
     "embed_to_qdrant_node",
+    "populate_content_registry_node",
+    "sync_changed_sections_node",
 ]

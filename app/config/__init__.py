@@ -10,9 +10,11 @@ from app.config.data_paths import (
     PROJECT_ROOT,
     ensure_data_dir,
 )
+from app.config.database_settings import DatabaseSettings, get_database_settings
 from app.config.embedding_settings import EmbeddingSettings, get_embedding_settings
 
 __all__ = [
+    "DatabaseSettings",
     "BM25_STATE_PATH",
     "CHUNKED_DATA_PATH",
     "CRAWLED_DATA_FILENAME",
@@ -22,6 +24,7 @@ __all__ = [
     "PROJECT_ROOT",
     "Settings",
     "ensure_data_dir",
+    "get_database_settings",
     "get_embedding_settings",
     "settings",
 ]

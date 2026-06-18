@@ -100,6 +100,11 @@ class QdrantService:
             field_name="metadata.language",
             field_schema=models.PayloadSchemaType.KEYWORD,
         )
+        self._client.create_payload_index(
+            collection_name=name,
+            field_name="metadata.section_id",
+            field_schema=models.PayloadSchemaType.KEYWORD,
+        )
         logger.info("Created Qdrant collection '%s'", name)
         return True
 
@@ -150,3 +155,45 @@ class QdrantService:
 
         logger.info("Uploaded %d documents in %d batches", uploaded, batches)
         return uploaded, batches
+
+    def delete_points_by_chunk_ids(self, chunk_ids: list[str]) -> int:
+        """Delete Qdrant points whose IDs match ``chunk_ids``."""
+        if not chunk_ids:
+            return 0
+        name = self._settings.collection_name
+        self._client.delete(
+            collection_name=name,
+            points_selector=models.PointIdsList(points=chunk_ids),
+        )
+        logger.info("Deleted %d Qdrant points by chunk ID", len(chunk_ids))
+        return len(chunk_ids)
+
+    def delete_points_by_section_id(self, section_id: str) -> int:
+        """Delete all Qdrant points belonging to ``section_id``."""
+        name = self._settings.collection_name
+        self._client.delete(
+            collection_name=name,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="metadata.section_id",
+                            match=models.MatchValue(value=section_id),
+                        )
+                    ]
+                )
+            ),
+        )
+        logger.info("Deleted Qdrant points for section %s", section_id)
+        return 0
+
+    def ensure_section_id_index(self) -> None:
+        """Create the section_id payload index on an existing collection."""
+        name = self._settings.collection_name
+        if not self._client.collection_exists(name):
+            return
+        self._client.create_payload_index(
+            collection_name=name,
+            field_name="metadata.section_id",
+            field_schema=models.PayloadSchemaType.KEYWORD,
+        )

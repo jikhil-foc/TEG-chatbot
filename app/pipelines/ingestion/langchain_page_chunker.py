@@ -29,17 +29,17 @@ from pathlib import Path
 
 import tiktoken
 from langchain_core.documents import Document
-from langchain_text_splitters import (
-    MarkdownHeaderTextSplitter,
-    RecursiveCharacterTextSplitter,
-)
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.config.data_paths import CHUNKED_DATA_PATH, CRAWLED_DATA_PATH
+from app.pipelines.ingestion.content_hash_normalizer import compute_content_hash, sanitize_text_for_storage
+from app.pipelines.ingestion.page_section import PageSection
+from app.pipelines.ingestion.page_section_extractor import extract_page_sections
 
 INPUT_PATH = CRAWLED_DATA_PATH
 OUTPUT_PATH = CHUNKED_DATA_PATH
 
-_MARKDOWN_HEADERS = [("#", "h1"), ("##", "h2"), ("###", "h3")]
+_CHUNK_NAMESPACE = uuid.UUID("6ba7b811-9dad-11d1-80b4-00c04fd430c8")
 
 # Parent token target. Treated as a soft ceiling: a single content block that
 # exceeds it is kept intact rather than split. Child chunks are emitted one per
@@ -58,9 +58,21 @@ _HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s")
 _FENCE_RE = re.compile(r"^\s*(```+|~~~+)")
 _LIST_RE = re.compile(r"^\s*([-*+]|\d+[.)])\s+")
 
-_header_splitter: MarkdownHeaderTextSplitter | None = None
 _pdf_splitter: RecursiveCharacterTextSplitter | None = None
 _encoder: tiktoken.Encoding | None = None
+
+
+def build_parent_chunk_id(section_key: str, parent_index: int) -> str:
+    """Derive a stable parent chunk ID within a section."""
+    return str(uuid.uuid5(_CHUNK_NAMESPACE, f"{section_key}|parent|{parent_index}"))
+
+
+def build_child_chunk_id(parent_chunk_id: str, chunk_index: int, content: str) -> str:
+    """Derive a stable child chunk ID from parent, index, and content hash."""
+    child_hash = compute_content_hash(content)
+    return str(
+        uuid.uuid5(_CHUNK_NAMESPACE, f"{parent_chunk_id}|{chunk_index}|{child_hash}")
+    )
 
 
 @dataclass
@@ -77,6 +89,9 @@ class ChildChunk:
     chunk_level: str
     chunk_index: int
     content: str
+    section_id: str = ""
+    content_hash: str = ""
+    section_content_hash: str = ""
 
 
 @dataclass
@@ -106,6 +121,33 @@ def load(path: Path = INPUT_PATH) -> list[dict]:
     return payload.get("pages", [])
 
 
+def dedupe_crawled_pages_by_url(pages: list[dict]) -> list[dict]:
+    """Keep one crawled page per URL, preferring the longest markdown body."""
+    by_url: dict[str, dict] = {}
+    for page in pages:
+        url = (page.get("url") or "").strip()
+        if not url:
+            continue
+        existing = by_url.get(url)
+        if existing is None or len(page.get("markdown") or "") > len(
+            existing.get("markdown") or ""
+        ):
+            by_url[url] = page
+    return list(by_url.values())
+
+
+def dedupe_chunks_by_id(chunks: list[ChildChunk]) -> list[ChildChunk]:
+    """Drop duplicate child chunks that share the same deterministic ``chunk_id``."""
+    seen: set[str] = set()
+    unique: list[ChildChunk] = []
+    for chunk in chunks:
+        if chunk.chunk_id in seen:
+            continue
+        seen.add(chunk.chunk_id)
+        unique.append(chunk)
+    return unique
+
+
 def _get_encoder() -> tiktoken.Encoding:
     global _encoder
     if _encoder is None:
@@ -116,16 +158,6 @@ def _get_encoder() -> tiktoken.Encoding:
 def _token_len(text: str) -> int:
     """Count tokens with a local tiktoken encoder (no model inference)."""
     return len(_get_encoder().encode(text, disallowed_special=()))
-
-
-def _get_header_splitter() -> MarkdownHeaderTextSplitter:
-    global _header_splitter
-    if _header_splitter is None:
-        _header_splitter = MarkdownHeaderTextSplitter(
-            headers_to_split_on=_MARKDOWN_HEADERS,
-            strip_headers=False,
-        )
-    return _header_splitter
 
 
 def _get_pdf_splitter() -> RecursiveCharacterTextSplitter:
@@ -239,32 +271,30 @@ def merge_blocks(blocks: list[str], target_tokens: int) -> list[str]:
     return chunks
 
 
-def _header_path(metadata: dict) -> list[str]:
-    """Build ordered header hierarchy from markdown header-split metadata."""
-    return [metadata[key] for _, key in _MARKDOWN_HEADERS if metadata.get(key)]
-
-
 def _child_to_document(chunk: ChildChunk) -> Document:
     """Map a flat child chunk to a LangChain ``Document`` for vector-store use."""
-    return Document(
-        page_content=chunk.content,
-        metadata={
-            "chunk_id": chunk.chunk_id,
-            "parent_chunk_id": chunk.parent_chunk_id,
-            "url": chunk.url,
-            "title": chunk.title,
-            "language": chunk.language,
-            "content_type": chunk.content_type,
-            "header_path": chunk.header_path,
-            "chunk_level": chunk.chunk_level,
-            "chunk_index": chunk.chunk_index,
-        },
-    )
+    metadata = {
+        "chunk_id": chunk.chunk_id,
+        "parent_chunk_id": chunk.parent_chunk_id,
+        "url": chunk.url,
+        "title": chunk.title,
+        "language": chunk.language,
+        "content_type": chunk.content_type,
+        "header_path": chunk.header_path,
+        "chunk_level": chunk.chunk_level,
+        "chunk_index": chunk.chunk_index,
+    }
+    if chunk.section_id:
+        metadata["section_id"] = chunk.section_id
+    if chunk.content_hash:
+        metadata["content_hash"] = chunk.content_hash
+    return Document(page_content=chunk.content, metadata=metadata)
 
 
 def document_to_child_chunk(document: Document) -> ChildChunk:
     """Reconstruct a :class:`ChildChunk` from a pipeline ``Document``."""
     metadata = document.metadata
+    content = document.page_content
     return ChildChunk(
         chunk_id=metadata["chunk_id"],
         parent_chunk_id=metadata["parent_chunk_id"],
@@ -275,111 +305,119 @@ def document_to_child_chunk(document: Document) -> ChildChunk:
         header_path=metadata.get("header_path", []),
         chunk_level=metadata.get("chunk_level", "child"),
         chunk_index=metadata["chunk_index"],
-        content=document.page_content,
+        content=content,
+        section_id=metadata.get("section_id", ""),
+        content_hash=metadata.get("content_hash", "") or compute_content_hash(content),
+        section_content_hash=metadata.get("section_content_hash", ""),
     )
 
 
+def chunk_page_section(section: PageSection) -> tuple[list[ChildChunk], int]:
+    """Chunk a single :class:`PageSection` into deterministic child chunks."""
+    if section.content_type == "pdf":
+        return _chunk_pdf_section(section)
+
+    section_blocks = split_into_blocks(section.content)
+    chunks: list[ChildChunk] = []
+    parent_count = 0
+    chunk_index = 0
+
+    for parent_index, parent_text in enumerate(
+        merge_blocks(section_blocks, _PARENT_CHUNK_SIZE)
+    ):
+        parent_text = parent_text.strip()
+        if not parent_text:
+            continue
+
+        parent_id = build_parent_chunk_id(section.section_key, parent_index)
+        parent_count += 1
+
+        for child_text in split_into_blocks(parent_text):
+            child_text = sanitize_text_for_storage(child_text.strip())
+            if not child_text:
+                continue
+
+            child_hash = compute_content_hash(child_text)
+            chunks.append(
+                ChildChunk(
+                    chunk_id=build_child_chunk_id(parent_id, chunk_index, child_text),
+                    parent_chunk_id=parent_id,
+                    url=section.url,
+                    title=section.title,
+                    language=section.language,
+                    content_type=section.content_type,
+                    header_path=section.header_path,
+                    chunk_level="child",
+                    chunk_index=chunk_index,
+                    content=child_text,
+                    section_id=section.section_id,
+                    content_hash=child_hash,
+                    section_content_hash=section.content_hash,
+                )
+            )
+            chunk_index += 1
+
+    return chunks, parent_count
+
+
+def _chunk_pdf_section(section: PageSection) -> tuple[list[ChildChunk], int]:
+    splitter = _get_pdf_splitter()
+    chunks: list[ChildChunk] = []
+
+    for chunk_index, text in enumerate(splitter.split_text(section.content)):
+        text = sanitize_text_for_storage(text.strip())
+        if not text:
+            continue
+
+        child_hash = compute_content_hash(text)
+        chunk_id = build_child_chunk_id(section.section_id, chunk_index, text)
+        chunks.append(
+            ChildChunk(
+                chunk_id=chunk_id,
+                parent_chunk_id=chunk_id,
+                url=section.url,
+                title=section.title,
+                language=section.language,
+                content_type="pdf",
+                header_path=[],
+                chunk_level="child",
+                chunk_index=chunk_index,
+                content=text,
+                section_id=section.section_id,
+                content_hash=child_hash,
+                section_content_hash=section.content_hash,
+            )
+        )
+
+    return chunks, len(chunks)
+
+
 def split_html(pages: list[dict]) -> tuple[list[ChildChunk], int]:
-    """Split HTML pages into parent-child chunks with header hierarchy metadata.
-
-    Parents merge atomic content blocks up to the parent token target; children
-    are emitted one per content block (paragraph-wise), so no paragraph, table,
-    list or code block is ever split. Returns child chunks only and the total
-    number of parent chunks produced.
-    """
-    header_splitter = _get_header_splitter()
-
+    """Split HTML pages into parent-child chunks with header hierarchy metadata."""
     chunks: list[ChildChunk] = []
     parent_count = 0
 
     for page in pages:
         if page.get("content_type") != "html" or not page.get("success"):
             continue
-        markdown = page.get("markdown") or ""
-        if not markdown.strip():
-            continue
-
-        page_metadata = page.get("metadata", {})
-        url = page.get("url", "")
-        title = page_metadata.get("title", "")
-        language = page.get("language")
-        chunk_index = 0
-
-        for section in header_splitter.split_text(markdown):
-            header_path = _header_path(section.metadata)
-            section_blocks = split_into_blocks(section.page_content)
-
-            for parent_text in merge_blocks(section_blocks, _PARENT_CHUNK_SIZE):
-                parent_text = parent_text.strip()
-                if not parent_text:
-                    continue
-
-                parent_id = str(uuid.uuid4())
-                parent_count += 1
-
-                for child_text in split_into_blocks(parent_text):
-                    child_text = child_text.strip()
-                    if not child_text:
-                        continue
-
-                    chunks.append(
-                        ChildChunk(
-                            chunk_id=str(uuid.uuid4()),
-                            parent_chunk_id=parent_id,
-                            url=url,
-                            title=title,
-                            language=language,
-                            content_type="html",
-                            header_path=header_path,
-                            chunk_level="child",
-                            chunk_index=chunk_index,
-                            content=child_text,
-                        )
-                    )
-                    chunk_index += 1
+        for section in extract_page_sections(page):
+            section_chunks, section_parents = chunk_page_section(section)
+            chunks.extend(section_chunks)
+            parent_count += section_parents
 
     return chunks, parent_count
 
 
 def split_pdf(pages: list[dict]) -> list[ChildChunk]:
-    """Split PDF pages into fixed-size overlapping child chunks with flat metadata."""
-    splitter = _get_pdf_splitter()
+    """Split PDF pages into fixed-size child chunks with deterministic IDs."""
     chunks: list[ChildChunk] = []
 
     for page in pages:
         if page.get("content_type") != "pdf" or not page.get("success"):
             continue
-        markdown = page.get("markdown") or ""
-        if not markdown.strip():
-            continue
-
-        page_metadata = page.get("metadata", {})
-        url = page.get("url", "")
-        title = page_metadata.get("title", "")
-        language = page.get("language")
-
-        for chunk_index, text in enumerate(splitter.split_text(markdown)):
-            text = text.strip()
-            if not text:
-                continue
-
-            chunk_id = str(uuid.uuid4())
-            chunks.append(
-                ChildChunk(
-                    chunk_id=chunk_id,
-                    # PDFs have no header hierarchy; point parent at self so
-                    # parent expansion in retrieval is a no-op for PDF hits.
-                    parent_chunk_id=chunk_id,
-                    url=url,
-                    title=title,
-                    language=language,
-                    content_type="pdf",
-                    header_path=[],
-                    chunk_level="child",
-                    chunk_index=chunk_index,
-                    content=text,
-                )
-            )
+        for section in extract_page_sections(page):
+            section_chunks, _ = chunk_page_section(section)
+            chunks.extend(section_chunks)
 
     return chunks
 
@@ -396,7 +434,7 @@ def run_pipeline(
     the LangChain ``Document`` objects built from the child chunks (ready to
     pass to a vector store) and a :class:`ChunkingSummary` of run counts.
     """
-    pages = load(input_path)
+    pages = dedupe_crawled_pages_by_url(load(input_path))
 
     html_pages = [
         page
@@ -415,7 +453,7 @@ def run_pipeline(
 
     html_chunks, html_parent_count = split_html(pages)
     pdf_chunks = split_pdf(pages)
-    all_child_chunks = html_chunks + pdf_chunks
+    all_child_chunks = dedupe_chunks_by_id(html_chunks + pdf_chunks)
     documents = [_child_to_document(chunk) for chunk in all_child_chunks]
 
     summary = ChunkingSummary(
