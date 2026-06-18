@@ -7,6 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { ThemeProvider } from "@mui/material/styles";
 import { askQuestionStream, ChatApiError } from "@/api/chat";
 import { ChatInput } from "@/components/ChatInput";
 import { MessageList } from "@/components/MessageList";
@@ -18,6 +19,7 @@ import type {
 import { createMessageId } from "@/utils/id";
 import { DEFAULT_PIPELINE_STEP } from "@/utils/pipelineStatus";
 import { createNewSessionId, getOrCreateSessionId } from "@/utils/session";
+import { createWidgetTheme } from "@/theme/muiTheme";
 import "@/styles/widget.css";
 
 const DEFAULT_CONFIG: Required<ChatWidgetConfig> = {
@@ -265,12 +267,15 @@ export function ChatWidget({
     setMessages(createWelcomeMessages(welcomeMessage));
   }, [welcomeMessage]);
 
+  const theme = useMemo(() => createWidgetTheme(), []);
+
   return (
-    <div
-      className={`teg-widget teg-widget--${position}`}
-      data-open={isOpen ? "true" : "false"}
-      style={widgetStyle}
-    >
+    <ThemeProvider theme={theme}>
+      <div
+        className={`teg-widget teg-widget--${position}`}
+        data-open={isOpen ? "true" : "false"}
+        style={widgetStyle}
+      >
       {isOpen && (
         <section
           id={panelId}
@@ -340,6 +345,7 @@ export function ChatWidget({
         {isOpen ? <CloseIcon /> : <ChatIcon />}
       </button>
     </div>
+    </ThemeProvider>
   );
 }
 

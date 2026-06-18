@@ -120,7 +120,6 @@ const STEP_ICON: Record<string, () => ReactElement> = {
   fallback: ReplyIcon,
 };
 
-const SPINNING_STEPS = new Set(["detect_language", "retrieve", "rerank"]);
 const PULSE_STEPS = new Set([
   "thinking",
   "analyze_query",
@@ -132,11 +131,9 @@ const PULSE_STEPS = new Set([
 export function PipelineStatusIcon({ step }: PipelineStatusIconProps) {
   const resolvedStep = normalizePipelineStep(step);
   const Icon = STEP_ICON[resolvedStep] ?? ThinkingIcon;
-  const animationClass = SPINNING_STEPS.has(resolvedStep)
-    ? "teg-message__status-icon--spin"
-    : PULSE_STEPS.has(resolvedStep)
-      ? "teg-message__status-icon--pulse"
-      : "";
+  const animationClass = PULSE_STEPS.has(resolvedStep)
+    ? "teg-message__status-icon--pulse"
+    : "";
 
   return (
     <span

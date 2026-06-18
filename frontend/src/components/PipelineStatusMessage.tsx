@@ -16,12 +16,17 @@ export function PipelineStatusMessage({ step, id }: PipelineStatusMessageProps) 
     <p
       id={id}
       className="teg-message__status"
+      role="status"
       aria-live="polite"
     >
       <PipelineStatusIcon step={resolvedStep} />
-      <span className="teg-message__status-text">
+      <span
+        key={resolvedStep}
+        className="teg-message__status-text teg-message__status-text--fade"
+      >
         {pipelineStatusLabel(resolvedStep)}
       </span>
+      <span className="teg-sr-only">Assistant is working</span>
     </p>
   );
 }
