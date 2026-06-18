@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import argparse
 
+import _bootstrap  # noqa: F401
+
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.pipeline.crawl import run_crawl, save_pages_json

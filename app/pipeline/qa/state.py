@@ -26,6 +26,10 @@ class QAState(TypedDict, total=False):
 
     # Detect-language outputs.
     language: str
+    fallback_language: str
+    retrieval_language: str | None
+    retrieval_pass: str
+    fallback_search_query: str
 
     # Retrieval / rerank outputs.
     hits: list[dict[str, Any]]

@@ -1,12 +1,14 @@
 """Command-line interface for the hybrid RAG indexing/retrieval pipeline.
 
-Index the default chunked data file::
+Index the default chunked data file (from the project root)::
 
     python -m scripts.embedding index
+    python scripts/embedding.py index
 
 Recreate the collection from scratch::
 
     python -m scripts.embedding index --recreate
+    python scripts/embedding.py index --recreate
 
 Run a hybrid search::
 
@@ -21,6 +23,8 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+
+import _bootstrap  # noqa: F401 — project root on sys.path when run as a file
 
 from app.core.logging import configure_logging
 from app.pipeline.embedding.config import get_embedding_settings

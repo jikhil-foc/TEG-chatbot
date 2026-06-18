@@ -59,11 +59,15 @@ class HybridRetriever:
         query: str,
         top_k: int = 10,
         expand_to_parent: bool = True,
+        language: str | None = None,
     ) -> list[dict]:
         """Return the ``top_k`` hybrid-search hits for ``query``.
 
         Each hit is a dict with ``chunk_id``, ``score``, ``content`` and the
         full chunk ``metadata``.
+
+        When ``language`` is set, only chunks tagged with that language in
+        Qdrant metadata are considered (``English`` or ``Irish``).
 
         When ``expand_to_parent`` is true the small matched child chunk is
         replaced by its full parent section (all sibling child chunks sharing
@@ -76,10 +80,29 @@ class HybridRetriever:
         if not query or not query.strip():
             return []
 
+        qdrant_filter = None
+        if language:
+            qdrant_filter = qmodels.Filter(
+                must=[
+                    qmodels.FieldCondition(
+                        key="metadata.language",
+                        match=qmodels.MatchValue(value=language),
+                    )
+                ]
+            )
+
         logger.info(
-            "Hybrid search (top_k=%d, expand=%s): %r", top_k, expand_to_parent, query
+            "Hybrid search (top_k=%d, expand=%s, language=%r): %r",
+            top_k,
+            expand_to_parent,
+            language,
+            query,
         )
-        hits = self._vector_store.similarity_search_with_score(query, k=top_k)
+        hits = self._vector_store.similarity_search_with_score(
+            query,
+            k=top_k,
+            filter=qdrant_filter,
+        )
 
         results: list[dict] = []
         seen_parents: set[str] = set()

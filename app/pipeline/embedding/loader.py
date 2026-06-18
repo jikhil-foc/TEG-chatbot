@@ -92,6 +92,9 @@ def _record_to_document(record: dict[str, Any], encoding_name: str) -> Document:
         "raw_content": raw_content,
         "token_count": count_tokens(page_content, encoding_name),
     }
+    language = (record.get("language") or "").strip()
+    if language:
+        metadata["language"] = language
     return Document(page_content=page_content, metadata=metadata)
 
 

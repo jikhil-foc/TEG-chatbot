@@ -40,7 +40,7 @@ export interface ChatMessage {
   relatedQuestions?: string[];
   error?: boolean;
   streaming?: boolean;
-  statusText?: string;
+  statusStep?: string;
 }
 
 export interface ChatWidgetConfig {

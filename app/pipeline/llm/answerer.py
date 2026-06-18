@@ -26,15 +26,32 @@ _SYSTEM_PROMPT = (
     "which group applies, ask a specific clarifying question instead of "
     "combining conflicting details. If the context does not contain enough "
     "information to answer, politely ask the user to ask a question related "
-    "to TEG. Do not invent facts or cite sources not provided."
+    "to TEG. Do not invent facts or cite sources not provided.\n\n"
+    "Format your answer in Markdown for readability:\n"
+    "- Use short paragraphs for prose.\n"
+    "- Use bullet or numbered lists for steps, requirements, or multiple items.\n"
+    "- Use **bold** for key terms such as exam names, dates, and fees.\n"
+    "- Use Markdown tables when presenting structured data (fees, dates, levels).\n"
+    "- Keep inline source citations as [1], [2], etc. Do not use markdown links "
+    "for citations.\n"
+    "Do not wrap the entire answer in a code fence."
 )
 
 
-def _language_instruction(language: str | None) -> str:
+def _language_instruction(
+    language: str | None,
+    context_language: str | None = None,
+) -> str:
     """Build a system instruction asking the model to reply in ``language``."""
     if not language:
         return ""
-    return f" Respond in {language}."
+    instruction = f" Respond in {language}."
+    if context_language and context_language != language:
+        instruction += (
+            f" The provided context is in {context_language}; convey all facts "
+            f"in {language} in your answer."
+        )
+    return instruction
 
 
 def _build_context(reranked: list[dict]) -> str:
@@ -57,11 +74,14 @@ def generate_answer(
     reranked: list[dict],
     settings: EmbeddingSettings | None = None,
     language: str | None = None,
+    context_language: str | None = None,
 ) -> str:
     """Generate a grounded answer to ``query`` from the ``reranked`` context.
 
     When ``language`` is provided the model is instructed to reply in that
-    language (e.g. ``"Irish"`` or ``"English"``).
+    language (e.g. ``"Irish"`` or ``"English"``). When ``context_language``
+    differs from ``language``, the model is told to translate facts from the
+    retrieved context.
     """
     if not reranked:
         return (
@@ -73,7 +93,10 @@ def generate_answer(
     context = _build_context(reranked)
 
     messages = [
-        SystemMessage(content=_SYSTEM_PROMPT + _language_instruction(language)),
+        SystemMessage(
+            content=_SYSTEM_PROMPT
+            + _language_instruction(language, context_language)
+        ),
         HumanMessage(content=f"Context:\n{context}\n\nQuestion: {query}"),
     ]
 
@@ -103,6 +126,7 @@ def generate_answer_stream(
     reranked: list[dict],
     settings: EmbeddingSettings | None = None,
     language: str | None = None,
+    context_language: str | None = None,
 ) -> Iterator[str]:
     """Stream a grounded answer token-by-token from the ``reranked`` context."""
     if not reranked:
@@ -116,7 +140,10 @@ def generate_answer_stream(
     context = _build_context(reranked)
 
     messages = [
-        SystemMessage(content=_SYSTEM_PROMPT + _language_instruction(language)),
+        SystemMessage(
+            content=_SYSTEM_PROMPT
+            + _language_instruction(language, context_language)
+        ),
         HumanMessage(content=f"Context:\n{context}\n\nQuestion: {query}"),
     ]
 

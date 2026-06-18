@@ -71,6 +71,14 @@ class EmbeddingSettings(BaseSettings):
             "this the relevance gate routes to the canned fallback answer"
         ),
     )
+    rerank_language_boost: float = Field(
+        default=0.25,
+        ge=0.0,
+        description=(
+            "Bonus added to rerank_score when chunk content language matches "
+            "the detected query language (English or Irish)"
+        ),
+    )
     qa_max_validation_retries: int = Field(
         default=2,
         ge=0,

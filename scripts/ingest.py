@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 
+import _bootstrap  # noqa: F401
+
 from app.core.logging import configure_logging
 from app.pipeline.ingestion import IngestionConfig
 from app.services import ingestion_service

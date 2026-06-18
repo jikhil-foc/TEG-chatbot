@@ -53,13 +53,22 @@ _IRISH_STOPWORDS = frozenset({
 
 # High-frequency English function words. Note ``an`` is intentionally omitted
 # because it is also a very common Irish word (the definite article) and would
-# otherwise bias scoring toward English.
+# otherwise bias scoring toward English. Question words and auxiliaries shared
+# with Irish (e.g. ``do``) are included so short English queries are not
+# misclassified when only one ambiguous token would otherwise score for Irish.
 _ENGLISH_STOPWORDS = frozenset({
     "the", "and", "of", "to", "in", "is", "are", "was", "were", "for", "with",
     "on", "as", "by", "at", "this", "that", "from", "or", "be", "it", "not",
     "have", "has", "had", "will", "which", "you", "we", "they", "their", "our",
     "all", "can", "but", "more", "about", "if", "out", "up", "your", "these",
+    # Common in short English user questions
+    "a", "i", "me", "my", "do", "does", "did", "how", "what", "when", "where",
+    "why", "who", "am",
 })
+
+# Minimum Irish-vs-English stopword margin before a query language guess is
+# trusted; weaker signals default to ``None`` (English in the QA pipeline).
+_QUERY_SCORE_MARGIN = 2
 
 
 def clean_markdown(text: str) -> str:
@@ -99,6 +108,17 @@ def _language_from_scores(irish: int, english: int) -> str | None:
     return "Irish" if irish > english else "English"
 
 
+def _language_from_query_scores(irish: int, english: int) -> str | None:
+    """Like :func:`_language_from_scores` but requires a clear margin for queries."""
+    if irish == 0 and english == 0:
+        return None
+    if irish == english:
+        return None
+    if abs(irish - english) < _QUERY_SCORE_MARGIN:
+        return None
+    return "Irish" if irish > english else "English"
+
+
 def detect_language_from_text(text: str) -> str | None:
     """Guess Irish vs English by counting language-specific function words.
 
@@ -126,7 +146,7 @@ def detect_query_language(text: str) -> str | None:
     tokens = [t.lower() for t in _WORD_RE.findall(text)]
     if len(tokens) < _MIN_QUERY_TOKENS:
         return None
-    return _language_from_scores(*_score_language(tokens, include_fada=True))
+    return _language_from_query_scores(*_score_language(tokens, include_fada=True))
 
 
 def detect_language(result) -> str | None:

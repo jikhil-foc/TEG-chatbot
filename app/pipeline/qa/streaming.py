@@ -17,7 +17,10 @@ from app.pipeline.qa.suggestions import generate_related_questions
 logger = logging.getLogger(__name__)
 
 _TERMINAL_NODES = frozenset({"clarify", "fallback", "greeting"})
-_STATUS_STEP_ALIASES = {"generate_answer": "generate"}
+_STATUS_STEP_ALIASES = {
+    "generate_answer": "generate",
+    "retrieve_primary": "retrieve",
+}
 
 
 def _status_step(node_name: str) -> str:
