@@ -2,9 +2,9 @@ import asyncio
 
 from fastapi import APIRouter
 
-from app.core.config import settings
-from app.pipeline.crawl import run_crawl, save_pages_json
-from app.schemas.crawl import CrawlRequest, CrawlResponse
+from app.config.app_settings import settings
+from app.pipelines.ingestion.teg_site_crawler import run_crawl, save_pages_json
+from app.models.crawl import CrawlRequest, CrawlResponse
 
 router = APIRouter()
 

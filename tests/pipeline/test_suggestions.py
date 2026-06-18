@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from app.pipeline.embedding.config import EmbeddingSettings
-from app.pipeline.qa.streaming import _done_event, _should_generate_related_questions
-from app.pipeline.qa.suggestions import generate_related_questions
+from app.config.embedding_settings import EmbeddingSettings
+from app.qa.sse_event_stream import _done_event, _should_generate_related_questions
+from app.qa.related_question_generator import generate_related_questions
 
 
 def _settings_with_key() -> EmbeddingSettings:
@@ -22,7 +22,7 @@ def test_generate_related_questions_parses_valid_json() -> None:
     mock_model.invoke.return_value = mock_response
 
     with patch(
-        "app.pipeline.qa.suggestions.build_chat_model",
+        "app.qa.related_question_generator.build_chat_model",
         return_value=mock_model,
     ):
         questions = generate_related_questions(
@@ -44,7 +44,7 @@ def test_generate_related_questions_returns_empty_on_malformed_json() -> None:
     mock_model.invoke.return_value = mock_response
 
     with patch(
-        "app.pipeline.qa.suggestions.build_chat_model",
+        "app.qa.related_question_generator.build_chat_model",
         return_value=mock_model,
     ):
         questions = generate_related_questions(
@@ -86,7 +86,7 @@ def test_should_generate_related_questions_skips_fallback() -> None:
 
 def test_done_event_includes_related_questions_for_normal_answer() -> None:
     with patch(
-        "app.pipeline.qa.streaming.generate_related_questions",
+        "app.qa.sse_event_stream.generate_related_questions",
         return_value=["What are exam fees?", "How do I register?"],
     ):
         event = _done_event(

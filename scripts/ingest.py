@@ -11,9 +11,9 @@ import argparse
 
 import _bootstrap  # noqa: F401
 
-from app.core.logging import configure_logging
-from app.pipeline.ingestion import IngestionConfig
-from app.services import ingestion_service
+from app.utils.logging_config import configure_logging
+from app.models.ingest_request import IngestionConfig
+from app.application import teg_ingest_facade as ingestion_service
 
 
 def main(argv: list[str] | None = None) -> int:

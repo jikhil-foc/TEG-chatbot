@@ -5,8 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
-from app.core.config import settings
-from app.core.langsmith import configure_langsmith
+from app.config.app_settings import settings
+from app.utils.langsmith_tracing import configure_langsmith
 
 
 @asynccontextmanager

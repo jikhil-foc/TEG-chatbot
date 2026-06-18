@@ -5,8 +5,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from app.pipeline.embedding.config import EmbeddingSettings
-from app.pipeline.llm.reranker import _apply_language_boost, rerank
+from app.config.embedding_settings import EmbeddingSettings
+from app.services.cohere_reranker import _apply_language_boost, rerank
 
 
 def _hit(chunk_id: str, content: str, *, language: str | None = None) -> dict:
@@ -26,7 +26,7 @@ def test_apply_language_boost_adds_bonus_for_matching_english() -> None:
     ]
 
     with patch(
-        "app.pipeline.llm.reranker._chunk_content_language",
+        "app.services.cohere_reranker._chunk_content_language",
         side_effect=["English", "Irish"],
     ):
         boosted = _apply_language_boost(scored, "English", 0.25)
@@ -43,7 +43,7 @@ def test_apply_language_boost_adds_bonus_for_matching_irish() -> None:
     ]
 
     with patch(
-        "app.pipeline.llm.reranker._chunk_content_language",
+        "app.services.cohere_reranker._chunk_content_language",
         side_effect=["English", "Irish"],
     ):
         boosted = _apply_language_boost(scored, "Irish", 0.25)
@@ -57,7 +57,7 @@ def test_apply_language_boost_skips_unknown_language() -> None:
     scored = [{**_hit("en", "english"), "rerank_score": 0.6}]
 
     with patch(
-        "app.pipeline.llm.reranker._chunk_content_language",
+        "app.services.cohere_reranker._chunk_content_language",
         return_value="English",
     ):
         boosted = _apply_language_boost(scored, None, 0.25)
@@ -65,7 +65,7 @@ def test_apply_language_boost_skips_unknown_language() -> None:
     assert boosted[0]["rerank_score"] == 0.6
 
 
-@patch("app.pipeline.llm.reranker._get_client")
+@patch("app.services.cohere_reranker._get_client")
 def test_rerank_scores_all_candidates_then_applies_language_boost(
     mock_get_client: MagicMock,
 ) -> None:
@@ -87,7 +87,7 @@ def test_rerank_scores_all_candidates_then_applies_language_boost(
     )
 
     with patch(
-        "app.pipeline.llm.reranker._chunk_content_language",
+        "app.services.cohere_reranker._chunk_content_language",
         side_effect=["Irish", "English", "Irish"],
     ):
         ranked = rerank(

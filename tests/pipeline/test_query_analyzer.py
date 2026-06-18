@@ -1,7 +1,7 @@
 """Tests for conversational query analysis and session handling."""
 
-from app.pipeline.qa.query_analyzer import analyze_conversation
-from app.pipeline.qa.session import get_pending, reset_sessions
+from app.qa.query_intent_analyzer import analyze_conversation
+from app.qa.session_store import get_pending, reset_sessions
 
 
 def setup_function() -> None:

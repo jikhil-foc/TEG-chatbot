@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.pipeline.llm.answerer import _language_instruction
+from app.services.grounded_answer import _language_instruction
 
 
 def test_language_instruction_same_language() -> None:

@@ -1,10 +1,7 @@
 """Tests for QA citation and off-topic handling."""
 
-from app.pipeline.qa.nodes import (
-    extract_cited_sources,
-    greeting_node,
-    is_off_topic_answer,
-)
+from app.nodes.shared.citation_parser import extract_cited_sources, is_off_topic_answer
+from app.nodes.retrieval import greeting_node
 
 
 def test_greeting_node_returns_welcome_message() -> None:

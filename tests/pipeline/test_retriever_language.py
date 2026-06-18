@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from langchain_core.documents import Document
 
-from app.pipeline.embedding.retriever import HybridRetriever
+from app.pipelines.retrieval.hybrid_retriever import HybridRetriever
 
 
 def _retriever_with_mock_store() -> HybridRetriever:

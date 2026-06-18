@@ -66,25 +66,27 @@ pytest
 
 ```
 app/
-├── main.py                 # FastAPI app entry point
-├── core/                   # config, logging, paths (single source of truth)
-├── api/
-│   ├── deps.py             # shared FastAPI dependencies
-│   └── v1/
-│       ├── router.py       # aggregates all v1 routers
-│       └── routes/         # health, chat, crawl, chunk, embedding, pipeline, ask
-├── schemas/                # Pydantic request/response models
-├── services/               # thin orchestration between routes and pipeline
-└── pipeline/               # one package per stage
-    ├── crawl/              # website crawler stages
-    ├── language/           # language detection/enrichment
-    ├── chunk/              # LangChain chunking
-    ├── embedding/          # dense + sparse indexing/retrieval (+ orchestrator)
-    ├── ingestion/          # LangGraph crawl→index pipeline
-    ├── qa/                 # LangGraph question-answering
-    └── llm/                # chat model, answerer, reranker
+├── main.py                    # FastAPI entry point
+├── api/                       # HTTP layer (v1 routes, dependencies)
+├── application/               # API facades (teg_qa_facade, teg_ingest_facade)
+├── graphs/                    # LangGraph orchestration (QA + ingest)
+├── nodes/
+│   ├── ingestion/             # Ingest graph steps (crawl, chunk, index)
+│   ├── retrieval/             # QA graph steps (retrieve, rerank, answer)
+│   └── shared/                # Pure helpers (citations, relevance gate)
+├── pipelines/
+│   ├── ingestion/             # Crawl, chunk, indexing jobs
+│   └── retrieval/             # Hybrid retriever, chunk loader
+├── services/                  # External integrations (OpenAI, Cohere, Qdrant, BM25)
+├── prompts/                   # LLM prompt templates
+├── models/                    # Pydantic request/response models
+├── config/                    # Settings and data paths
+├── utils/                     # Logging, LangSmith tracing, language helpers
+├── qa/                        # QA support (streaming, query analysis, session)
+└── tools/                     # Agent tools (placeholder)
 
-data/                       # runtime JSON artifacts (gitignored)
-scripts/                    # CLI entry points
-tests/                      # pytest suite
+data/                          # runtime JSON artifacts (gitignored)
+scripts/                       # CLI entry points
+tests/                         # pytest suite
+frontend/                      # React chat widget
 ```

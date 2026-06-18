@@ -9,9 +9,9 @@ import argparse
 
 import _bootstrap  # noqa: F401
 
-from app.core.config import settings
-from app.core.logging import configure_logging
-from app.pipeline.crawl import run_crawl, save_pages_json
+from app.config.app_settings import settings
+from app.utils.logging_config import configure_logging
+from app.pipelines.ingestion.teg_site_crawler import run_crawl, save_pages_json
 
 
 def main(argv: list[str] | None = None) -> int:

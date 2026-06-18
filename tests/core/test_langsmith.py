@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from app.core import langsmith as langsmith_module
+from app.utils import langsmith_tracing as langsmith_module
 
 
 @pytest.fixture(autouse=True)
@@ -28,6 +28,11 @@ def _reset_langsmith_state(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_configure_langsmith_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
+    monkeypatch.setattr(
+        langsmith_module,
+        "get_langsmith_settings",
+        lambda: langsmith_module.LangSmithSettings(langsmith_tracing=False),
+    )
 
     assert langsmith_module.configure_langsmith() is False
     assert os.environ.get("LANGSMITH_TRACING") is None

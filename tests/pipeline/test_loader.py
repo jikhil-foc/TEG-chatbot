@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from app.pipeline.embedding.loader import load_documents
+from app.pipelines.retrieval.chunk_loader import load_documents
 
 
 def test_load_documents_preserves_language_metadata(tmp_path) -> None:
