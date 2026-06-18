@@ -24,7 +24,10 @@ import argparse
 import json
 from pathlib import Path
 
-import _bootstrap  # noqa: F401 — project root on sys.path when run as a file
+if __package__:
+    from scripts import _bootstrap  # noqa: F401
+else:
+    import _bootstrap  # noqa: F401  # project root on sys.path when run as a file
 
 from app.utils.logging_config import configure_logging
 from app.config.embedding_settings import get_embedding_settings

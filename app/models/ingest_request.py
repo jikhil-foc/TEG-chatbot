@@ -20,6 +20,14 @@ class IngestionConfig(BaseModel):
         description="Drop and recreate the Qdrant collection before indexing",
     )
     save_json: bool = True
+    incremental: bool = Field(
+        default=False,
+        description="Detect section-level changes and update only affected chunks",
+    )
+    baseline: bool = Field(
+        default=False,
+        description="Run full chunk/index path and populate the PostgreSQL registry",
+    )
 
 
 class CrawlStepSummary(BaseModel):
@@ -48,6 +56,15 @@ class ChunkStepSummary(BaseModel):
     output_file: str | None = None
 
 
+class ContentChangeStepSummary(BaseModel):
+    unchanged_sections: int
+    changed_sections: int
+    removed_sections: int
+    removed_chunks: int
+    changed_chunks: int
+    dense_embeddings_generated: int = 0
+
+
 class IngestionResult(BaseModel):
     """Aggregated result of a full ingestion pipeline run."""
 
@@ -55,5 +72,6 @@ class IngestionResult(BaseModel):
     steps_completed: list[str]
     crawl: CrawlStepSummary
     language: LanguageStepSummary
-    chunk: ChunkStepSummary
-    index: IndexSummary
+    chunk: ChunkStepSummary | None = None
+    index: IndexSummary | None = None
+    content_change: ContentChangeStepSummary | None = None

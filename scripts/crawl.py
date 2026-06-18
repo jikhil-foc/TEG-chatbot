@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import argparse
 
-import _bootstrap  # noqa: F401
+if __package__:
+    from scripts import _bootstrap  # noqa: F401
+else:
+    import _bootstrap  # noqa: F401
 
 from app.config.app_settings import settings
 from app.utils.logging_config import configure_logging

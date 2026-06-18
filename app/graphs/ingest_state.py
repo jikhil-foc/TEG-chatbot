@@ -16,6 +16,8 @@ class IngestionState(TypedDict, total=False):
     include_external: bool
     recreate: bool
     save_json: bool
+    incremental: bool
+    baseline: bool
 
     # Crawl outputs
     source_url: str
@@ -41,12 +43,21 @@ class IngestionState(TypedDict, total=False):
     chunk_pdf_child_chunks: int
     chunk_total_child_chunks: int
 
+    # Content change detection outputs
+    change_report_json: str
+    change_unchanged_sections: int
+    change_changed_sections: int
+    change_removed_sections: int
+    change_removed_chunks: int
+    change_changed_chunks: int
+
     # Index outputs
     index_collection_name: str
     index_total_documents: int
     index_uploaded: int
     index_batches: int
     index_recreated_collection: bool
+    index_dense_embeddings_generated: int
 
     # Progress tracking
     steps_completed: list[str]

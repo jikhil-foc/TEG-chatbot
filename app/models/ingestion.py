@@ -21,3 +21,11 @@ class IngestRequest(BaseModel):
         description="Drop and recreate the Qdrant collection before indexing",
     )
     save_json: bool = True
+    incremental: bool = Field(
+        default=False,
+        description="Detect section-level changes and update only affected chunks",
+    )
+    baseline: bool = Field(
+        default=False,
+        description="Run full chunk/index path and populate the PostgreSQL registry",
+    )

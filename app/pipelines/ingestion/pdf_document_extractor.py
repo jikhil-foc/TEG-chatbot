@@ -10,6 +10,7 @@ import pypdf
 
 from app.pipelines.ingestion.crawl_settings import PDF_FETCH_TIMEOUT, PDF_MAX_CONCURRENT
 from app.pipelines.ingestion.crawled_page import CrawledPage
+from app.pipelines.ingestion.content_hash_normalizer import sanitize_text_for_storage
 from app.services.language_detector import clean_markdown, detect_language_from_text
 
 
@@ -40,7 +41,9 @@ def _extract_pdf_text(pdf_bytes: bytes) -> tuple[str, dict]:
     pages_text: list[str] = []
     for page in reader.pages:
         pages_text.append(page.extract_text() or "")
-    markdown = clean_markdown("\n\n".join(pages_text).strip())
+    markdown = sanitize_text_for_storage(
+        clean_markdown("\n\n".join(pages_text).strip())
+    )
     return markdown, _pdf_metadata(reader)
 
 

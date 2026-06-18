@@ -100,7 +100,50 @@ def _record_to_document(record: dict[str, Any], encoding_name: str) -> Document:
     language = (record.get("language") or "").strip()
     if language:
         metadata["language"] = language
+    section_id = (record.get("section_id") or "").strip()
+    if section_id:
+        metadata["section_id"] = section_id
+    content_hash = (record.get("content_hash") or "").strip()
+    if content_hash:
+        metadata["content_hash"] = content_hash
     return Document(page_content=page_content, metadata=metadata)
+
+
+def child_chunk_to_document(
+    chunk: dict[str, Any] | Any,
+    encoding_name: str = "cl100k_base",
+) -> Document:
+    """Map a :class:`ChildChunk` or dict to a LangChain ``Document``."""
+    if hasattr(chunk, "__dataclass_fields__"):
+        record = {
+            "chunk_id": chunk.chunk_id,
+            "parent_chunk_id": chunk.parent_chunk_id,
+            "url": chunk.url,
+            "title": chunk.title,
+            "language": chunk.language,
+            "content_type": chunk.content_type,
+            "header_path": chunk.header_path,
+            "chunk_index": chunk.chunk_index,
+            "content": chunk.content,
+            "section_id": chunk.section_id,
+            "content_hash": chunk.content_hash,
+        }
+    else:
+        record = chunk
+    return _record_to_document(record, encoding_name)
+
+
+def child_chunks_to_documents(
+    chunks: list[Any],
+    encoding_name: str = "cl100k_base",
+) -> list[Document]:
+    """Convert child chunk records to LangChain documents."""
+    documents: list[Document] = []
+    for chunk in chunks:
+        if not (getattr(chunk, "content", None) or chunk.get("content", "")).strip():
+            continue
+        documents.append(child_chunk_to_document(chunk, encoding_name))
+    return documents
 
 
 def load_documents(
