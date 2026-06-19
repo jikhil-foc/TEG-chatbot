@@ -12,6 +12,7 @@ from app.models.answer_types import AnswerResult
 from app.nodes import retrieval as retrieval_nodes
 from app.pipelines.retrieval.hybrid_retriever import HybridRetriever
 from app.qa.conversation_history import ConversationMessage
+from app.graphs.node_completion_log import invoke_graph_with_node_logging
 from app.utils.langsmith_tracing import build_run_config, configure_langsmith
 
 logger = logging.getLogger(__name__)
@@ -181,13 +182,15 @@ def run_qa_pipeline(
         session_id=session_id,
     )
 
-    final_state = _get_graph().invoke(
+    final_state = invoke_graph_with_node_logging(
+        _get_graph(),
         initial_state,
         config=build_run_config(
             run_name="qa_pipeline",
             tags=["qa", "ask"],
             metadata={"query": query[:500]},
         ),
+        pipeline="qa",
     )
 
     return AnswerResult(

@@ -10,6 +10,7 @@ from app.utils.langsmith_tracing import build_run_config, configure_langsmith
 from app.config.embedding_settings import EmbeddingSettings, get_embedding_settings
 from app.pipelines.retrieval.hybrid_retriever import HybridRetriever
 from app.qa.conversation_history import ConversationMessage
+from app.graphs.node_completion_log import log_node_completed
 from app.graphs.qa_rag_graph import build_qa_initial_state, get_qa_graph
 from app.graphs.qa_state import QAState
 from app.qa.related_question_generator import generate_related_questions
@@ -114,6 +115,7 @@ def stream_qa_pipeline(
     for chunk in graph.stream(initial_state, config=config, stream_mode="updates"):
         for node_name, update in chunk.items():
             accumulated.update(update)
+            log_node_completed("qa", node_name, update)
             yield {"type": "status", "step": _status_step(node_name)}
 
             if node_name in _TERMINAL_NODES:

@@ -14,7 +14,11 @@ def test_root(client: TestClient) -> None:
 def test_health(client: TestClient) -> None:
     response = client.get("/api/v1/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    payload = response.json()
+    assert payload["status"] in {"ok", "degraded"}
+    if payload["status"] == "ok":
+        assert payload["database"] == "connected"
+        assert set(payload["registry"]) == {"pages", "sections", "chunks"}
 
 
 def test_chat_echo(client: TestClient) -> None:

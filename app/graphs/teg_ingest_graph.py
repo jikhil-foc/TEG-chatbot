@@ -16,6 +16,7 @@ from app.models.ingest_request import (
     LanguageStepSummary,
 )
 from app.nodes import ingestion as ingestion_nodes
+from app.graphs.node_completion_log import invoke_graph_with_node_logging
 from app.utils.langsmith_tracing import build_run_config, configure_langsmith
 
 _compiled_graph = None
@@ -143,7 +144,8 @@ def run_ingestion_pipeline(config: IngestionConfig | None = None) -> IngestionRe
     configure_langsmith()
     config = config or IngestionConfig()
     graph = _get_graph()
-    final_state = graph.invoke(
+    final_state = invoke_graph_with_node_logging(
+        graph,
         _build_initial_state(config),
         config=build_run_config(
             run_name="ingestion_pipeline",
@@ -156,5 +158,6 @@ def run_ingestion_pipeline(config: IngestionConfig | None = None) -> IngestionRe
                 "baseline": config.baseline,
             },
         ),
+        pipeline="ingestion",
     )
     return _state_to_result(final_state)

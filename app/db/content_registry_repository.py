@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.orm_models import ChunkRecord, PageRecord, SectionRecord
@@ -267,3 +267,12 @@ class ContentRegistryRepository:
 
         for section_id, section_chunks in chunks_by_section.items():
             self.replace_section_chunks(section_id, section_chunks)
+
+
+def get_content_registry_counts(session: Session) -> dict[str, int]:
+    """Return row counts for pages, sections, and chunks."""
+    return {
+        "pages": session.scalar(select(func.count()).select_from(PageRecord)) or 0,
+        "sections": session.scalar(select(func.count()).select_from(SectionRecord)) or 0,
+        "chunks": session.scalar(select(func.count()).select_from(ChunkRecord)) or 0,
+    }

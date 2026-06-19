@@ -16,21 +16,51 @@ cp .env.example .env
 
 ### Qdrant (required for `/ask` and search)
 
-The API stores embeddings in [Qdrant](https://qdrant.tech/). Start it locally before indexing or asking questions:
+The API stores embeddings in [Qdrant](https://qdrant.tech/). Default URL: `http://localhost:6333` (override with `QDRANT_URL` in `.env`).
+
+## Run (Docker — all services)
+
+Start Qdrant, PostgreSQL, the FastAPI backend, and the Vite frontend with one command:
+
+```bash
+cp .env.example .env   # fill OPENAI_API_KEY and COHERE_API_KEY
+docker compose up --build
+```
+
+| Service | URL |
+|---------|-----|
+| Chat UI | [http://localhost:5173](http://localhost:5173) |
+| API docs | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| Qdrant dashboard | [http://localhost:6333/dashboard](http://localhost:6333/dashboard) |
+
+Compose overrides `QDRANT_URL` to `http://qdrant:6333` and `DB_HOST` to `postgres` inside the backend container. Alembic migrations run automatically on backend startup. Your `.env` file must exist with API keys before starting.
+
+PostgreSQL is exposed on host port **5433** (not 5432) so it does not conflict with a local PostgreSQL install. From host-side tools use `localhost:5433` with the same username/password/database as in `.env`. The API health check reports content-registry row counts from the database the backend actually uses.
+
+The backend image includes Playwright Chromium for crawl/ingest endpoints. After changing the Dockerfile, rebuild with `docker compose up --build`.
+
+## Run (manual)
+
+Start Qdrant only:
 
 ```bash
 docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
 ```
 
-Default URL: `http://localhost:6333` (override with `QDRANT_URL` in `.env`).
-
-## Run
+Start the API:
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+Start the frontend (from `frontend/`):
+
+```bash
+npm install
+npm run dev
+```
 
 ## Endpoints
 
